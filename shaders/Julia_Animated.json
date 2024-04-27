@@ -1,0 +1,115 @@
+{
+  "id": 6597,
+  "name": "Julia Animated",
+  "fragment": "precision highp float;\nprecision highp int;\n\nuniform vec2 start;\nuniform int iter;\nuniform vec3 color;\nuniform float speed;\nuniform float time;\nuniform float escape;\nvarying vec2 vUv;\n\nvoid main() {\n    vec2 z;\n    float t = time * speed;\n    vec2 q = start + 0.1 * (\n        vec2(\n            sin(t * 0.89), cos(t)\n        ) * (0.25 + 0.5 * sin(t * 1.108))\n    ) - (\n        vec2(\n            cos(t * 0.39) + sin(t * .98)\n        ) * (0.25 + 0.5 * cos(t * 1.91))\n    );\n    z.x = 3.0 * (vUv.x - .5);\n    z.y = 3.0 * (vUv.y - .5);\n    \n    int y = 0;\n    for (int i = 0; i < 100; i++) {\n        y++;\n        float x = (z.x * z.x - z.y * z.y) + q.x;\n        float y = (z.x * z.y + z.x * z.y) + q.y;\n        \n        if ((x * x + y * y) > escape) {\n            break;\n        }\n        z.x = x;\n        z.y = y;\n    }\n    \n    float val = float(y) / float(iter);\n    gl_FragColor = vec4(color * val, 1.0) + 0.1;\n}",
+  "vertex": "precision highp float;\nprecision highp int;\n\nuniform mat4 modelViewMatrix;\nuniform mat4 projectionMatrix;\nvarying vec2 vUv;\n\nattribute vec3 position;\nattribute vec2 uv;\n\nvoid main() {\n    vUv = uv;\n    gl_Position = projectionMatrix * modelViewMatrix * vec4( position, 1.0 );\n}",
+  "uniforms": {
+    "iter": {
+      "name": "iter",
+      "displayName": null,
+      "type": "i",
+      "glslType": "int",
+      "useGridHelper": false,
+      "useRange": true,
+      "range": {
+        "min": "0",
+        "max": "100"
+      },
+      "isRandom": false,
+      "randomRange": null,
+      "useToggle": false,
+      "toggle": null,
+      "description": ""
+    },
+    "time": {
+      "name": "time",
+      "displayName": null,
+      "type": "f",
+      "glslType": "float",
+      "useGridHelper": false,
+      "useRange": false,
+      "range": null,
+      "isRandom": false,
+      "randomRange": null,
+      "useToggle": false,
+      "toggle": null,
+      "description": ""
+    },
+    "color": {
+      "name": "color",
+      "displayName": null,
+      "type": "c",
+      "glslType": "vec3",
+      "useGridHelper": false,
+      "useRange": false,
+      "range": null,
+      "isRandom": false,
+      "randomRange": null,
+      "useToggle": false,
+      "toggle": null,
+      "description": ""
+    },
+    "start": {
+      "name": "start",
+      "displayName": null,
+      "type": "v2",
+      "glslType": "vec2",
+      "useGridHelper": true,
+      "useRange": false,
+      "range": {
+        "min": {
+          "x": "-1",
+          "y": "-1"
+        },
+        "max": {
+          "x": "1",
+          "y": "1"
+        }
+      },
+      "isRandom": false,
+      "randomRange": null,
+      "useToggle": false,
+      "toggle": null,
+      "description": ""
+    },
+    "escape": {
+      "name": "escape",
+      "displayName": null,
+      "type": "f",
+      "glslType": "float",
+      "useGridHelper": false,
+      "useRange": true,
+      "range": {
+        "min": "0",
+        "max": "10"
+      },
+      "isRandom": false,
+      "randomRange": null,
+      "useToggle": false,
+      "toggle": null,
+      "description": ""
+    },
+    "speed": {
+      "name": "speed",
+      "displayName": null,
+      "type": "f",
+      "glslType": "float",
+      "useGridHelper": false,
+      "useRange": true,
+      "range": {
+        "min": "-1",
+        "max": "1"
+      },
+      "isRandom": false,
+      "randomRange": null,
+      "useToggle": false,
+      "toggle": null,
+      "description": ""
+    }
+  },
+  "url": "http://shaderfrog.com/app/view/6597",
+  "user": {
+    "username": "andrewray",
+    "url": "http://shaderfrog.com/app/profile/andrewray"
+  }
+}
