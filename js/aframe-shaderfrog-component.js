@@ -1,4 +1,4 @@
-AFRAME.registerSystem('shaderfrog', {
+AFRAME.registerSystem('shader-frog', {
   init:function(){
     this.frog_runtime = new ShaderRuntime();
     this.clock = new THREE.Clock();
