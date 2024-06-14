@@ -150,7 +150,7 @@ ShaderRuntime.prototype = {
 
     for (x = 0; shader = this.runningShaders[x++];) {
       if (shader[findBy] === identifier) {
-        extend(shader.material, omit(newShaderData, 'id', 'url'));
+        extend(shader.material, omit(newShaderData, 'id', 'url', 'user'));
         shader.material.needsUpdate = true;
       }
     }
@@ -194,9 +194,9 @@ ShaderRuntime.prototype = {
     }
 
     if (shaderName in this.shaderTypes) {
-      extend(this.shaderTypes[shaderName], omit(newData, 'url'));
+      extend(this.shaderTypes[shaderName], omit(newData, 'url', 'user'));
     } else {
-      this.shaderTypes[shaderName] = omit(newData, 'url');
+      this.shaderTypes[shaderName] = omit(newData, 'url', 'user');
     }
     return newData;
   },
