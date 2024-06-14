@@ -8,17 +8,16 @@
   <a-scene stats>
     
     <a-assets>
-    
-    <a-asset-item id="Rodin-gltf" src="https://cdn.glitch.global/be56ace4-8001-4162-9c76-3f841ed62822/rodin.glb?v=1718306312277"></a-asset-item>
+      <a-asset-item id="Rodin-gltf" src="https://cdn.glitch.global/be56ace4-8001-4162-9c76-3f841ed62822/rodin.glb?v=1718306312277"></a-asset-item>
+      <a-asset-item id="Rodin-obj" src="https://cdn.glitch.global/be56ace4-8001-4162-9c76-3f841ed62822/rodin.obj"></a-asset-item>
       
-    <a-asset-item id="Rodin-obj" src="https://cdn.glitch.global/be56ace4-8001-4162-9c76-3f841ed62822/rodin.obj"></a-asset-item>
-    
-    
+      <a-asset-item id="shader01" src="shaders/ForkofSlapSlithe.json"></a-asset-item>
     </a-assets>
+    
     
     <a-box position="-1 0.5 -3" rotation="0 45 0" color="#4CC3D9"></a-box>
     <a-cylinder position="1 0.75 -3" radius="0.5" height="1.5" color="#FFC65D"></a-cylinder>
-    <a-sphere canvas-updater position="0 1 -5" radius="1" shaderloader="src:url(shaders/ForkofSlapSlithe.json)">
+    <a-sphere canvas-updater position="0 1 -5" radius="1" shaderloader="src:#shader01">
     </a-sphere>
     <a-plane position="0 0 -4" rotation="-90 0 0" width="4" height="4" color="#7BC8A4"></a-plane>
     
@@ -29,7 +28,7 @@
     <a-entity position="4 0 -5" scale="0.03 0.03 0.03" obj-model="obj: #Rodin-obj"></a-entity>
     
     <a-entity
-        shaderloader="src:url(shaders/ForkofSlapSlithe.json)"  
+        shaderloader="src:#shader01"  
         id="patsdomatajs"
         scale="0.03 0.03 0.03"
         position="0 0 -4"
