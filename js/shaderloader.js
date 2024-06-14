@@ -22,7 +22,7 @@ AFRAME.registerSystem('shaderloader', {
     this.frog_runtime.updateShaders( this.clock.getElapsedTime() );
   }
 });
-AFRAME.registerComponent('shader-frog',{
+AFRAME.registerComponent('shaderloader',{
   schema:{
     src:{type:"asset"}
   },
