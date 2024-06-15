@@ -4,8 +4,8 @@
     <script src="js/shaderloader.js"></script>
   </head>
   <body>
-    <a-scene stats>
-      <a-assets>
+    
+     <a-assets>
         <a-asset-item
           id="Rodin-gltf"
           src="https://cdn.glitch.global/be56ace4-8001-4162-9c76-3f841ed62822/rodinUV.glb?v=1718456386173"
@@ -24,11 +24,16 @@
         <a-asset-item id="meat" src="shaders/meat01.json"></a-asset-item>
         <a-asset-item id="TrWall" src="shaders/sh_transWall.json"></a-asset-item>
         <a-asset-item id="Water" src="shaders/sh_water.json"></a-asset-item>
+        <a-asset-item id="Snake" src="shaders/SnakeThing.json"></a-asset-item>
+       
         
       </a-assets>
+    
+    <a-scene stats>
+     
 
       <a-box
-        shaderloader="src:#TrWall"
+        shaderloader="src:#Snake"
         position="-1 0.5 -3"
         rotation="0 45 0"
         color="#4CC3D9"
@@ -69,7 +74,7 @@
       ></a-entity>
 
       <a-entity
-        shaderloader="src:#shader01; scale: 100"
+        shaderloader="src:#Snake"
         id="patsdomatajs"
         scale="0.03 0.03 0.03"
         position="0 0 -4"
