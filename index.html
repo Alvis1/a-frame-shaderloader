@@ -20,8 +20,8 @@
           src="shaders/ForkofSlapSlithe.json"
         ></a-asset-item>
         
-        <a-asset-item id="shader02" src="shaders/shader9.json"></a-asset-item>
-        <a-asset-item id="meat" src="shaders/meat01.json"></a-asset-item>
+        <a-asset-item id="fire" src="shaders/sh_MovingStripesAndContour.json"></a-asset-item>
+        <a-asset-item id="noise" src="shaders/meat01.json"></a-asset-item>
         <a-asset-item id="TrWall" src="shaders/sh_transWall.json"></a-asset-item>
         <a-asset-item id="Water" src="shaders/sh_water.json"></a-asset-item>
         <a-asset-item id="Snake" src="shaders/SnakeThing.json"></a-asset-item>
@@ -31,60 +31,25 @@
     
     <a-scene stats>
      
-
-      <a-box
-        shaderloader="src:#Snake"
-        position="-1 0.5 -3"
-        rotation="0 45 0"
-        color="#4CC3D9"
-      ></a-box>
-      <a-cylinder
-        position="1 0.75 -3"
-        radius="0.5"
-        height="1.5"
-        color="#FFC65D"
-      ></a-cylinder>
-      <a-sphere
-        position="0 1 -5"
-        radius="1"
-        shaderloader="src:#shader01"
-      >
-      </a-sphere>
-      <a-plane
-        position="0 0 -4"
-        rotation="-90 0 0"
-        width="4"
-        height="4"
-        color="#7BC8A4"
-      ></a-plane>
-
       <a-plane
         shaderloader="src:#Water"
         rotation="-90 0 0"
-        width="10"
-        height="10"
-        position=" 3 .1 0"
+        width="11"
+        height="100"
+        position=" 0 0 0"
       ></a-plane>
 
-      <a-entity
-        shaderloader="src:#meat"        
-        position="4 0 -5"
+       <a-entity
+        id="d01"
         scale="0.03 0.03 0.03"
-        obj-model="obj: #Rodin-obj"
-        rotation="0 35 0"
-      ></a-entity>
-
-      <a-entity
-        shaderloader="src:#Snake"
-        id="patsdomatajs"
-        scale="0.03 0.03 0.03"
-        position="0 0 -4"
+        position="-4 0 -4"
         gltf-model="#Rodin-gltf"
         rotation="0 35 0"
       ></a-entity>
-      
+        
       <a-entity
-        id="patsdomatajsOrig"
+        id="d02"
+        shaderloader="src:#fire"
         scale="0.03 0.03 0.03"
         position="-2 0 -4"
         gltf-model="#Rodin-gltf"
@@ -92,12 +57,36 @@
       ></a-entity>
       
       <a-entity
-        id="patsdomatajsOrig"
+        id="d03"    
+        shaderloader="src:#Water"      
         scale="0.03 0.03 0.03"
-        position="-4 0 -4"
+        position="0 0 -4"
         gltf-model="#Rodin-gltf"
         rotation="0 35 0"
       ></a-entity>
+      
+      <a-entity
+        id="d04"
+        shaderloader="src:#noise"        
+        position="2 0 -5"
+        scale="0.03 0.03 0.03"
+        obj-model="obj: #Rodin-obj"
+        rotation="0 35 0"
+      ></a-entity>
+      
+      <a-entity
+        id="d05"
+        shaderloader="src:#outline"  
+        position="4 0 -5"
+        scale="0.03 0.03 0.03"
+        obj-model="obj: #Rodin-obj"
+        rotation="0 35 0"
+      ></a-entity>
+
+ 
+
+      
+
       
       
       <a-entity wasd-controls id="rig" position="0 2 20">
