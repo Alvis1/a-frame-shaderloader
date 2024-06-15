@@ -1,42 +1,75 @@
 <html>
-<head>
-  <script src="https://aframe.io/releases/1.6.0/aframe.min.js"></script>
-  <script src="js/shaderloader.js"></script>
-</head>
-<body>
-  <a-scene stats>
-    
-    <a-assets>
-      <a-asset-item id="Rodin-gltf" src="https://cdn.glitch.global/be56ace4-8001-4162-9c76-3f841ed62822/rodin.glb?v=1718306312277"></a-asset-item>
-      <a-asset-item id="Rodin-obj" src="https://cdn.glitch.global/be56ace4-8001-4162-9c76-3f841ed62822/rodin.obj"></a-asset-item>
-      
-      <a-asset-item id="shader01" src="shaders/ForkofSlapSlithe.json"></a-asset-item>
-      <a-asset-item id="shader02" src="shaders/shader9.json"></a-asset-item>
-      
-    </a-assets>
-    
-    
-    <a-box 
-            shaderloader="src:#shader02"
-           position="-1 0.5 -3" rotation="0 45 0" color="#4CC3D9"></a-box>
-    <a-cylinder position="1 0.75 -3" radius="0.5" height="1.5" color="#FFC65D"></a-cylinder>
-    <a-sphere canvas-updater position="0 1 -5" radius="1" shaderloader="src:#shader01">
-    </a-sphere>
-    <a-plane position="0 0 -4" rotation="-90 0 0" width="4" height="4" color="#7BC8A4"></a-plane>
-    
-    <a-plane shaderloader="src:#shader02" rotation="-90 0 0" width="10" height="10" position=" 3 .1 0"></a-plane>
-    
- 
-    
-    <a-entity position="4 0 -5" scale="0.03 0.03 0.03" obj-model="obj: #Rodin-obj"></a-entity>
-    
-    <a-entity
-        shaderloader="src:#shader02"  
+  <head>
+    <script src="https://aframe.io/releases/1.6.0/aframe.min.js"></script>
+    <script src="js/shaderloader.js"></script>
+  </head>
+  <body>
+    <a-scene stats>
+      <a-assets>
+        <a-asset-item
+          id="Rodin-gltf"
+          src="https://cdn.glitch.global/be56ace4-8001-4162-9c76-3f841ed62822/rodinUV.glb?v=1718456386173"
+        ></a-asset-item>
+        <a-asset-item
+          id="Rodin-obj"
+          src="https://cdn.glitch.global/be56ace4-8001-4162-9c76-3f841ed62822/rodin.obj"
+        ></a-asset-item>
+
+        <a-asset-item
+          id="shader01"
+          src="shaders/ForkofSlapSlithe.json"
+        ></a-asset-item>
+        <a-asset-item id="shader02" src="shaders/shader9.json"></a-asset-item>
+      </a-assets>
+
+      <a-box
+        shaderloader="src:#shader02"
+        position="-1 0.5 -3"
+        rotation="0 45 0"
+        color="#4CC3D9"
+      ></a-box>
+      <a-cylinder
+        position="1 0.75 -3"
+        radius="0.5"
+        height="1.5"
+        color="#FFC65D"
+      ></a-cylinder>
+      <a-sphere
+        position="0 1 -5"
+        radius="1"
+        shaderloader="src:#shader01"
+      >
+      </a-sphere>
+      <a-plane
+        position="0 0 -4"
+        rotation="-90 0 0"
+        width="4"
+        height="4"
+        color="#7BC8A4"
+      ></a-plane>
+
+      <a-plane
+        shaderloader="src:#shader02"
+        rotation="-90 0 0"
+        width="10"
+        height="10"
+        position=" 3 .1 0"
+      ></a-plane>
+
+      <a-entity
+        shaderloader="src:#shader01"        
+        position="4 0 -5"
+        scale="0.03 0.03 0.03"
+        obj-model="obj: #Rodin-obj"
+      ></a-entity>
+
+      <a-entity
+        shaderloader="src:#shader01"
         id="patsdomatajs"
         scale="0.03 0.03 0.03"
         position="0 0 -4"
-        gltf-model= "#Rodin-gltf"
+        gltf-model="#Rodin-gltf"
       ></a-entity>
-  </a-scene>
-</body>
+    </a-scene>
+  </body>
 </html>

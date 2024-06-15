@@ -2,24 +2,22 @@ AFRAME.registerSystem('shaderloader', {
   init: function() {
     this.frog_runtime = new ShaderRuntime();
     this.clock = new THREE.Clock();
-    var self = this;
 
-    var scene = document.querySelector('a-scene');
+    const scene = document.querySelector('a-scene');
+    scene.addEventListener('loaded', this.registerCamera.bind(this));
+
     if (scene.hasLoaded) {
-      registerCamera();
-    } else {
-      scene.addEventListener('loaded', registerCamera);
-    }
-
-    function registerCamera() {
-      var camera = document.querySelector("a-scene").systems["camera"];
-      if (camera && camera.sceneEl && camera.sceneEl.camera) {
-        camera = camera.sceneEl.camera;
-        self.frog_runtime.registerCamera(camera);
-      }
+      this.registerCamera();
     }
   },
-  tick: function(t) {
+  registerCamera: function() {
+    const cameraSystem = document.querySelector("a-scene").systems["camera"];
+    if (cameraSystem && cameraSystem.sceneEl && cameraSystem.sceneEl.camera) {
+      const camera = cameraSystem.sceneEl.camera;
+      this.frog_runtime.registerCamera(camera);
+    }
+  },
+  tick: function() {
     this.frog_runtime.updateShaders(this.clock.getElapsedTime());
   }
 });
@@ -35,19 +33,20 @@ AFRAME.registerComponent('shaderloader', {
     this.el.addEventListener('model-loaded', this.applyShader);
   },
   update: function() {
-    if (this.el.getObject3D('mesh')) {
+    const mesh = this.el.getObject3D('mesh');
+    if (mesh) {
       this.applyShader();
     }
   },
   applyShader: function() {
-    var mesh = this.el.getObject3D('mesh');
+    const mesh = this.el.getObject3D('mesh');
     if (mesh) {
       this.storeOriginalMaterials(mesh);
 
-      this.system.frog_runtime.load(this.data.src, function(shaderData) {
-        var material = this.system.frog_runtime.get(shaderData.name);
+      this.system.frog_runtime.load(this.data.src, (shaderData) => {
+        const material = this.system.frog_runtime.get(shaderData.name);
         this.applyMaterialToMesh(mesh, material);
-      }.bind(this));
+      });
     }
   },
   storeOriginalMaterials: function(mesh) {
@@ -65,7 +64,7 @@ AFRAME.registerComponent('shaderloader', {
     });
   },
   remove: function() {
-    var mesh = this.el.getObject3D('mesh');
+    const mesh = this.el.getObject3D('mesh');
     if (mesh) {
       this.restoreOriginalMaterials(mesh);
     }
@@ -80,63 +79,56 @@ AFRAME.registerComponent('shaderloader', {
   }
 });
 
+
 let defaultThreeUniforms = [
   'normalMatrix', 'viewMatrix', 'projectionMatrix', 'position', 'normal',
   'modelViewMatrix', 'uv', 'uv2', 'modelMatrix'
 ];
 
-function ShaderRuntime() {}
-
-ShaderRuntime.prototype = {
-  mainCamera: null,
-  cubeCameras: {},
-  reserved: { time: null, cameraPosition: null },
-  umap: {
+function ShaderRuntime() {
+  this.mainCamera = null;
+  this.cubeCameras = {};
+  this.reserved = { time: null, cameraPosition: null };
+  this.umap = {
     float: { type: 'f', value: 0 },
     int: { type: 'i', value: 0 },
-    vec2: { type: 'v2', value() { return new THREE.Vector2(); } },
-    vec3: { type: 'v3', value() { return new THREE.Vector3(); } },
-    vec4: { type: 'v4', value() { return new THREE.Vector4(); } },
+    vec2: { type: 'v2', value: () => new THREE.Vector2() },
+    vec3: { type: 'v3', value: () => new THREE.Vector3() },
+    vec4: { type: 'v4', value: () => new THREE.Vector4() },
     samplerCube: { type: 't' },
     sampler2D: { type: 't' }
-  },
+  };
+  this.shaderTypes = {};
+  this.runningShaders = [];
+}
+
+ShaderRuntime.prototype = {
   getUmap(type) {
-    let value = this.umap[type].value;
+    const value = this.umap[type].value;
     return typeof value === 'function' ? value() : value;
   },
   load(sourceOrSources, callback) {
-    let sources = sourceOrSources,
-        onlyOneSource = typeof sourceOrSources === 'string';
+    const sources = Array.isArray(sourceOrSources) ? sourceOrSources : [sourceOrSources];
+    const loadedShaders = [];
+    let itemsLoaded = 0;
 
-    if (onlyOneSource) {
-      sources = [sourceOrSources];
-    }
-
-    let loadedShaders = new Array(sources.length),
-        itemsLoaded = 0;
-
-    let loadSource = (index, source) => {
-      let loader = new THREE.FileLoader();
-      loader.load(source, (json) => {
+    sources.forEach((source, index) => {
+      new THREE.FileLoader().load(source, (json) => {
         let parsed;
         try {
           parsed = JSON.parse(json);
-          delete parsed.id; // Errors if passed to rawshadermaterial :(
+          delete parsed.id;
         } catch (e) {
-          throw new Error('Could not parse shader ' + source + '! Please verify the URL is correct.');
+          throw new Error(`Could not parse shader ${source}! Please verify the URL is correct.`);
         }
         this.add(parsed.name, parsed);
         loadedShaders[index] = parsed;
 
         if (++itemsLoaded === sources.length) {
-          callback(onlyOneSource ? loadedShaders[0] : loadedShaders);
+          callback(loadedShaders.length === 1 ? loadedShaders[0] : loadedShaders);
         }
       });
-    };
-
-    for (let x = 0; x < sources.length; x++) {
-      loadSource(x, sources[x]);
-    }
+    });
   },
   registerCamera(camera) {
     if (!(camera instanceof THREE.Camera)) {
@@ -156,59 +148,52 @@ ShaderRuntime.prototype = {
     } else if (name === this.mainCamera) {
       delete this.mainCamera;
     } else {
-      throw new Error('You never registered camera ' + name);
+      throw new Error(`You never registered camera ${name}`);
     }
   },
-  updateSource(identifier, config, findBy) {
-    findBy = findBy || 'name';
-
+  updateSource(identifier, config, findBy = 'name') {
     if (!this.shaderTypes[identifier]) {
-      throw new Error('Runtime Error: Cannot update shader ' + identifier + ' because it has not been added.');
+      throw new Error(`Runtime Error: Cannot update shader ${identifier} because it has not been added.`);
     }
 
-    let newShaderData = this.add(identifier, config),
-        shader, x;
-
-    for (x = 0; shader = this.runningShaders[x++];) {
+    const newShaderData = this.add(identifier, config);
+    this.runningShaders.forEach((shader) => {
       if (shader[findBy] === identifier) {
         extend(shader.material, omit(newShaderData, 'id', 'url', 'user'));
         shader.material.needsUpdate = true;
       }
-    }
+    });
   },
   renameShader(oldName, newName) {
-    let x, shader;
-
     if (!(oldName in this.shaderTypes)) {
-      throw new Error('Could not rename shader ' + oldName + ' to ' + newName + '. It does not exist.');
+      throw new Error(`Could not rename shader ${oldName} to ${newName}. It does not exist.`);
     }
 
     this.shaderTypes[newName] = this.shaderTypes[oldName];
     delete this.shaderTypes[oldName];
 
-    for (x = 0; shader = this.runningShaders[x++];) {
+    this.runningShaders.forEach((shader) => {
       if (shader.name === oldName) {
         shader.name = newName;
       }
-    }
+    });
   },
   get(identifier) {
-    let shaderType = this.shaderTypes[identifier];
+    const shaderType = this.shaderTypes[identifier];
     if (!shaderType.initted) {
       this.create(identifier);
     }
     return shaderType.material;
   },
   add(shaderName, config) {
-    let newData = clone(config),
-        uniform;
+    const newData = clone(config);
     newData.fragmentShader = config.fragment;
     newData.vertexShader = config.vertex;
     delete newData.fragment;
     delete newData.vertex;
 
-    for (var uniformName in newData.uniforms) {
-      uniform = newData.uniforms[uniformName];
+    for (const uniformName in newData.uniforms) {
+      const uniform = newData.uniforms[uniformName];
       if (uniform.value === null) {
         newData.uniforms[uniformName].value = this.getUmap(uniform.glslType);
       }
@@ -222,41 +207,34 @@ ShaderRuntime.prototype = {
     return newData;
   },
   create(identifier) {
-    let shaderType = this.shaderTypes[identifier];
+    const shaderType = this.shaderTypes[identifier];
     shaderType.material = new THREE.RawShaderMaterial(shaderType);
     this.runningShaders.push(shaderType);
-    shaderType.init && shaderType.init(shaderType.material);
+    if (shaderType.init) {
+      shaderType.init(shaderType.material);
+    }
     shaderType.material.needsUpdate = true;
     shaderType.initted = true;
     return shaderType.material;
   },
-  updateRuntime(identifier, data, findBy) {
-    findBy = findBy || 'name';
-    let shader, x, uniformName, uniform;
-
-    for (x = 0; shader = this.runningShaders[x++];) {
+  updateRuntime(identifier, data, findBy = 'name') {
+    this.runningShaders.forEach((shader) => {
       if (shader[findBy] === identifier) {
-        for (uniformName in data.uniforms) {
-          if (uniformName in this.reserved) {
-            continue;
-          }
-          if (uniformName in shader.material.uniforms) {
-            uniform = data.uniforms[uniformName];
+        for (const uniformName in data.uniforms) {
+          if (!(uniformName in this.reserved)) {
+            const uniform = data.uniforms[uniformName];
             if (uniform.type === 't' && typeof uniform.value === 'string') {
               uniform.value = this.cubeCameras[uniform.value].renderTarget;
             }
-            shader.material.uniforms[uniformName].value = data.uniforms[uniformName].value;
+            shader.material.uniforms[uniformName].value = uniform.value;
           }
         }
       }
-    }
+    });
   },
-  updateShaders(time, obj) {
-    let shader, x;
-    obj = obj || {};
-
-    for (x = 0; shader = this.runningShaders[x++];) {
-      for (let uniform in obj.uniforms) {
+  updateShaders(time, obj = {}) {
+    this.runningShaders.forEach((shader) => {
+      for (const uniform in obj.uniforms) {
         if (uniform in shader.material.uniforms) {
           shader.material.uniforms[uniform].value = obj.uniforms[uniform];
         }
@@ -270,32 +248,20 @@ ShaderRuntime.prototype = {
       if ('time' in shader.material.uniforms) {
         shader.material.uniforms.time.value = time;
       }
-    }
-  },
-  shaderTypes: {},
-  runningShaders: []
+    });
+  }
 };
 
 // Convenience methods
-function extend() {
-  let length = arguments.length,
-      obj = arguments[0];
-
-  if (length < 2) {
-    return obj;
-  }
-
-  for (let index = 1; index < length; index++) {
-    let source = arguments[index],
-        keys = Object.keys(source || {}),
-        l = keys.length;
-    for (let i = 0; i < l; i++) {
-      let key = keys[i];
-      obj[key] = source[key];
+function extend(target, ...sources) {
+  sources.forEach(source => {
+    if (source) {
+      Object.keys(source).forEach(key => {
+        target[key] = source[key];
+      });
     }
-  }
-
-  return obj;
+  });
+  return target;
 }
 
 function clone(obj) {
@@ -303,9 +269,10 @@ function clone(obj) {
 }
 
 function omit(obj, ...keys) {
-  let cloned = clone(obj), x, key;
-  for (x = 0; key = keys[x++];) {
+  const cloned = clone(obj);
+  keys.forEach(key => {
     delete cloned[key];
-  }
+  });
   return cloned;
 }
+
