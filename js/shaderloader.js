@@ -30,7 +30,7 @@ AFRAME.registerComponent('shaderloader', {
   },
   init: function() {
     this.applyShader = this.applyShader.bind(this);
-    this.originalMaterial = null;
+    this.originalMaterials = {};
 
     this.el.addEventListener('model-loaded', this.applyShader);
   },
@@ -42,20 +42,41 @@ AFRAME.registerComponent('shaderloader', {
   applyShader: function() {
     var mesh = this.el.getObject3D('mesh');
     if (mesh) {
-      this.originalMaterial = mesh.material;
+      this.storeOriginalMaterials(mesh);
 
       this.system.frog_runtime.load(this.data.src, function(shaderData) {
         var material = this.system.frog_runtime.get(shaderData.name);
-        mesh.material = material;
+        this.applyMaterialToMesh(mesh, material);
       }.bind(this));
     }
   },
+  storeOriginalMaterials: function(mesh) {
+    mesh.traverse((node) => {
+      if (node.isMesh) {
+        this.originalMaterials[node.uuid] = node.material;
+      }
+    });
+  },
+  applyMaterialToMesh: function(mesh, material) {
+    mesh.traverse((node) => {
+      if (node.isMesh) {
+        node.material = material;
+      }
+    });
+  },
   remove: function() {
     var mesh = this.el.getObject3D('mesh');
-    if (mesh && this.originalMaterial) {
-      mesh.material = this.originalMaterial;
+    if (mesh) {
+      this.restoreOriginalMaterials(mesh);
     }
     this.el.removeEventListener('model-loaded', this.applyShader);
+  },
+  restoreOriginalMaterials: function(mesh) {
+    mesh.traverse((node) => {
+      if (node.isMesh && this.originalMaterials[node.uuid]) {
+        node.material = this.originalMaterials[node.uuid];
+      }
+    });
   }
 });
 
