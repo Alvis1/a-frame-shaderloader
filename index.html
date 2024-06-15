@@ -19,7 +19,12 @@
           id="shader01"
           src="shaders/ForkofSlapSlithe.json"
         ></a-asset-item>
+        
         <a-asset-item id="shader02" src="shaders/shader9.json"></a-asset-item>
+        <a-asset-item id="shader03" src="shaders/meat01.json"></a-asset-item>
+
+        
+        
       </a-assets>
 
       <a-box
@@ -57,14 +62,14 @@
       ></a-plane>
 
       <a-entity
-        shaderloader="src:#shader01"        
+        shaderloader="src:#shader03"        
         position="4 0 -5"
         scale="0.03 0.03 0.03"
         obj-model="obj: #Rodin-obj"
       ></a-entity>
 
       <a-entity
-        shaderloader="src:#shader01"
+        shaderloader="src:#shader01; scale: 100"
         id="patsdomatajs"
         scale="0.03 0.03 0.03"
         position="0 0 -4"
