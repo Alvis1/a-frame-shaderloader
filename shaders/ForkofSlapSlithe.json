@@ -13,7 +13,7 @@
       "glslType": "float"
     },
     "lineWidth": {
-      "value": "0.5",
+      "value": "0.05",
       "type": "f",
       "glslType": "float"
     },
@@ -54,17 +54,17 @@
     },
     "Glow_Shader1659670480918_176_color": {
       "value": {
-        "r": 1,
-        "g": 1,
-        "b": 1
+        "r": 0,
+        "g": 0,
+        "b": 20
       },
       "type": "c",
       "glslType": "vec3"
     },
     "resolution": {
       "value": {
-        "x": "1",
-        "y": "1"
+        "x": "10",
+        "y": "10"
       },
       "type": "v2",
       "glslType": "vec2"
@@ -80,7 +80,7 @@
       "glslType": "sampler2D"
     },
     "distortion": {
-      "value": "100",
+      "value": "10",
       "type": "f",
       "glslType": "float"
     },
