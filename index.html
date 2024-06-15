@@ -4,33 +4,28 @@
     <script src="js/shaderloader.js"></script>
   </head>
   <body>
-    
-     <a-assets>
-        <a-asset-item
-          id="Rodin-gltf"
-          src="https://cdn.glitch.global/be56ace4-8001-4162-9c76-3f841ed62822/rodinUV.glb?v=1718456386173"
-        ></a-asset-item>
-        <a-asset-item
-          id="Rodin-obj"
-          src="https://cdn.glitch.global/be56ace4-8001-4162-9c76-3f841ed62822/rodin.obj"
-        ></a-asset-item>
+    <a-assets>
+      <a-asset-item
+        id="Rodin-gltf"
+        src="https://cdn.glitch.global/be56ace4-8001-4162-9c76-3f841ed62822/rodinUV.glb?v=1718456386173"
+      ></a-asset-item>
+      <a-asset-item
+        id="Rodin-obj"
+        src="https://cdn.glitch.global/be56ace4-8001-4162-9c76-3f841ed62822/rodin.obj"
+      ></a-asset-item>
 
-        <a-asset-item
-          id="shader01"
-          src="shaders/ForkofSlapSlithe.json"
-        ></a-asset-item>
-        
-        <a-asset-item id="fire" src="shaders/sh_MovingStripesAndContour.json"></a-asset-item>
-        <a-asset-item id="noise" src="shaders/meat01.json"></a-asset-item>
-        <a-asset-item id="TrWall" src="shaders/sh_transWall.json"></a-asset-item>
-        <a-asset-item id="Water" src="shaders/sh_water.json"></a-asset-item>
-        <a-asset-item id="Snake" src="shaders/SnakeThing.json"></a-asset-item>
-       
-        
-      </a-assets>
-    
+      <a-asset-item id="outline" src="shaders/outline.json"></a-asset-item>
+      <a-asset-item id="fire" src="shaders/sh_fire.json"></a-asset-item>
+      <a-asset-item id="noise" src="shaders/noise.json"></a-asset-item>
+      <a-asset-item id="TrWall" src="shaders/sh_transWall.json"></a-asset-item>
+      <a-asset-item id="Water" src="shaders/sh_water.json"></a-asset-item>
+      <a-asset-item id="Snake" src="shaders/SnakeThing.json"></a-asset-item>
+      
+      
+      
+    </a-assets>
+
     <a-scene stats>
-     
       <a-plane
         shaderloader="src:#Water"
         rotation="-90 0 0"
@@ -39,14 +34,14 @@
         position=" 0 0 0"
       ></a-plane>
 
-       <a-entity
+      <a-entity
         id="d01"
         scale="0.03 0.03 0.03"
         position="-4 0 -4"
         gltf-model="#Rodin-gltf"
         rotation="0 35 0"
       ></a-entity>
-        
+
       <a-entity
         id="d02"
         shaderloader="src:#fire"
@@ -55,44 +50,37 @@
         gltf-model="#Rodin-gltf"
         rotation="0 35 0"
       ></a-entity>
-      
+
       <a-entity
-        id="d03"    
-        shaderloader="src:#Water"      
+        id="d03"
+        shaderloader="src:#Water"
         scale="0.03 0.03 0.03"
         position="0 0 -4"
         gltf-model="#Rodin-gltf"
         rotation="0 35 0"
       ></a-entity>
-      
+
       <a-entity
         id="d04"
-        shaderloader="src:#noise"        
-        position="2 0 -5"
+        shaderloader="src:#noise"
+        position="2 0 -4"
         scale="0.03 0.03 0.03"
         obj-model="obj: #Rodin-obj"
         rotation="0 35 0"
       ></a-entity>
-      
+
       <a-entity
         id="d05"
-        shaderloader="src:#outline"  
-        position="4 0 -5"
+        shaderloader="src:#outline"
+        position="4 0 -4"
         scale="0.03 0.03 0.03"
         obj-model="obj: #Rodin-obj"
         rotation="0 35 0"
       ></a-entity>
 
- 
-
-      
-
-      
-      
       <a-entity wasd-controls id="rig" position="0 2 20">
-          <a-entity id="camera" camera="fov:20" look-controls></a-entity>
+        <a-entity id="camera" camera="fov:20" look-controls></a-entity>
       </a-entity>
-      
     </a-scene>
   </body>
 </html>

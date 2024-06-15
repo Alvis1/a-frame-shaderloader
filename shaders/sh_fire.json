@@ -24,7 +24,7 @@
       "glslType": "float"
     },
     "displacementHeight": {
-      "value": "0.55147575",
+      "value": "20.0",
       "type": "f",
       "glslType": "float"
     },

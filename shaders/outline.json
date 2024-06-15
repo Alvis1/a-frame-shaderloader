@@ -43,7 +43,7 @@
       "glslType": "float"
     },
     "end": {
-      "value": "1",
+      "value": "0.8",
       "type": "f",
       "glslType": "float"
     },
@@ -54,23 +54,23 @@
     },
     "Glow_Shader1659670480918_176_color": {
       "value": {
-        "r": 0,
-        "g": 0,
-        "b": 20
+        "r": 5,
+        "g": 5,
+        "b": 40
       },
       "type": "c",
       "glslType": "vec3"
     },
     "resolution": {
       "value": {
-        "x": "10",
-        "y": "10"
+        "x": "1",
+        "y": "1"
       },
       "type": "v2",
       "glslType": "vec2"
     },
     "brightness": {
-      "value": "1.5",
+      "value": "0.0",
       "type": "f",
       "glslType": "float"
     },
