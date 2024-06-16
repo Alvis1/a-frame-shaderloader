@@ -14,20 +14,16 @@
         src="https://cdn.glitch.global/be56ace4-8001-4162-9c76-3f841ed62822/rodin.obj"
       ></a-asset-item>
 
-      <a-asset-item id="outline" src="shaders/outline.json"></a-asset-item>
+      <!--SHADERS-->
+      <a-asset-item id="outline" src="shaders/sh_outline.json"></a-asset-item>
       <a-asset-item id="fire" src="shaders/sh_fire.json"></a-asset-item>
-      <a-asset-item id="noise" src="shaders/noise.json"></a-asset-item>
-      <a-asset-item id="TrWall" src="shaders/sh_transWall.json"></a-asset-item>
-      <a-asset-item id="Water" src="shaders/sh_water.json"></a-asset-item>
-      <a-asset-item id="Snake" src="shaders/SnakeThing.json"></a-asset-item>
-      
-      
-      
+      <a-asset-item id="noise" src="shaders/sh_noise.json"></a-asset-item>
+      <a-asset-item id="water" src="shaders/sh_water.json"></a-asset-item>
     </a-assets>
 
     <a-scene stats>
       <a-plane
-        shaderloader="src:#Water"
+        shaderloader="src:#water"
         rotation="-90 0 0"
         width="11"
         height="100"
@@ -53,7 +49,7 @@
 
       <a-entity
         id="d03"
-        shaderloader="src:#Water"
+        shaderloader="src:#water"
         scale="0.03 0.03 0.03"
         position="0 0 -4"
         gltf-model="#Rodin-gltf"
