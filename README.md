@@ -1,4 +1,5 @@
-A-Frame ShaderLoader that loads JSON shaders and can be assigned to .glb .obj and A-Frame built in 3D objects.
+## A-Frame ShaderLoader 
+that loads JSON shaders and can be assigned to .glb .obj and A-Frame built in 3D objects.
 Based on ShaderFrog Loader: https://github.com/akbartus/A-Frame-ShaderFrog-Component-Upd
 
 [DEMO](https://a-frame-shaderloader.glitch.me)
