@@ -1,82 +1,54 @@
+<!doctype html>
 <html>
-  <head>
-    <script src="https://aframe.io/releases/1.6.0/aframe.min.js"></script>
-    <script src="js/a-frame-shaderloader.js"></script>
-  </head>
-  <body>
-    <a-assets>
-      <a-asset-item
-        id="Rodin-gltf"
-        src="https://cdn.glitch.global/be56ace4-8001-4162-9c76-3f841ed62822/rodinUV.glb?v=1718456386173"
-      ></a-asset-item>
-      <a-asset-item
-        id="Rodin-obj"
-        src="https://cdn.glitch.global/be56ace4-8001-4162-9c76-3f841ed62822/rodin.obj"
-      ></a-asset-item>
 
-      <!--SHADERS-->
-      <a-asset-item id="outline" src="shaders/sh_outline.json"></a-asset-item>
-      <a-asset-item id="fire" src="shaders/sh_fire.json"></a-asset-item>
-      <a-asset-item id="noise" src="shaders/sh_noise.json"></a-asset-item>
-      <a-asset-item id="water" src="shaders/sh_water.json"></a-asset-item>
+<head>
+  <script src="./js/aframe-171-a-0.1.min.js"></script>
+  <script src="./js/a-frame-shaderloader-0.2.js"></script>
+</head>
+
+<body>
+  <a-scene>
+    <a-assets>
+      <a-asset-item id="Rodin-gltf" src="objects/rodin.glb"></a-asset-item>
     </a-assets>
 
-    <a-scene stats>
-      <a-plane
-        shaderloader="src:#water"
-        rotation="-90 0 0"
-        width="11"
-        height="100"
-        position=" 0 0 0"
-      ></a-plane>
+    <!-- Row 1: converted from GLSL -->
+    <a-plane shader="src: TSL/water.js" rotation="-90 0 0" width="11" height="100" position="0 0 0"></a-plane>
 
-      <a-entity
-        id="d01"
-        scale="0.03 0.03 0.03"
-        position="-4 0 -4"
-        gltf-model="#Rodin-gltf"
-        rotation="0 35 0"
-      ></a-entity>
+    <a-entity id="d01" scale="0.03 0.03 0.03" position="-4 0 -4" gltf-model="#Rodin-gltf" rotation="0 35 0"></a-entity>
 
-      <a-entity
-        id="d02"
-        shaderloader="src:#fire"
-        scale="0.03 0.03 0.03"
-        position="-2 0 -4"
-        gltf-model="#Rodin-gltf"
-        rotation="0 35 0"
-      ></a-entity>
+    <a-entity id="d02" shader="src: TSL/fire.js" scale="0.03 0.03 0.03" position="-2 0 -4"
+      gltf-model="#Rodin-gltf" rotation="0 35 0"></a-entity>
 
-      <a-entity
-        id="d03"
-        shaderloader="src:#water"
-        scale="0.03 0.03 0.03"
-        position="0 0 -4"
-        gltf-model="#Rodin-gltf"
-        rotation="0 35 0"
-      ></a-entity>
+    <a-entity id="d03" shader="src: TSL/water.js" scale="0.03 0.03 0.03" position="0 0 -4"
+      gltf-model="#Rodin-gltf" rotation="0 35 0"></a-entity>
 
-      <a-entity
-        id="d04"
-        shaderloader="src:#noise"
-        position="2 0 -4"
-        scale="0.03 0.03 0.03"
-        obj-model="obj: #Rodin-obj"
-        rotation="0 35 0"
-      ></a-entity>
+    <a-entity id="d04" shader="src: TSL/noise.js" position="2 0 -4" scale="0.03 0.03 0.03"
+      gltf-model="#Rodin-gltf" rotation="0 35 0"></a-entity>
 
-      <a-entity
-        id="d05"
-        shaderloader="src:#outline"
-        position="4 0 -4"
-        scale="0.03 0.03 0.03"
-        obj-model="obj: #Rodin-obj"
-        rotation="0 35 0"
-      ></a-entity>
+    <a-entity id="d05" shader="src: TSL/outline.js" position="4 0 -4" scale="0.03 0.03 0.03"
+      gltf-model="#Rodin-gltf" rotation="0 35 0"></a-entity>
 
-      <a-entity wasd-controls id="rig" position="0 2 20">
-        <a-entity id="camera" camera="fov:20" look-controls></a-entity>
-      </a-entity>
-    </a-scene>
-  </body>
+    <!-- Row 2: TSL shaders -->
+    <a-entity id="d06" shader="src: TSL/bricks.js" scale="0.03 0.03 0.03" position="-2 0 -2"
+      gltf-model="#Rodin-gltf" rotation="0 35 0"></a-entity>
+
+    <a-entity id="d07" shader="src: TSL/multicam.js" scale="0.03 0.03 0.03" position="0 0 -2"
+      gltf-model="#Rodin-gltf" rotation="0 35 0"></a-entity>
+
+    <a-entity id="d08" shader="src: TSL/redgreennoise.js" scale="0.03 0.03 0.03" position="2 0 -2"
+      gltf-model="#Rodin-gltf" rotation="0 35 0"></a-entity>
+
+    <!-- Row 3: additional converted shaders -->
+    <a-plane id="d09" shader="src: TSL/transWall.js" position="-2 1.5 0" width="2" height="2"></a-plane>
+
+    <a-plane id="d10" shader="src: TSL/terrain-river.js" rotation="-90 0 0" width="4" height="4"
+      position="2 0.02 0"></a-plane>
+
+    <a-entity wasd-controls id="rig" position="0 2 20">
+      <a-entity id="camera" camera="fov:20" look-controls></a-entity>
+    </a-entity>
+  </a-scene>
+</body>
+
 </html>

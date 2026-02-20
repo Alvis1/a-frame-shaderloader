@@ -1,0 +1,29 @@
+{
+  "name": "a-frame-shaderloader",
+  "version": "1.0.0",
+  "description": "that loads GLSL shaders and can be assigned to .glb .obj and A-Frame built in 3D objects. Based on ShaderFrog Loader: https://github.com/akbartus/A-Frame-ShaderFrog-Component-Upd",
+  "main": "index.js",
+  "scripts": {
+    "build": "node build/build.mjs",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Alvis1/a-frame-shaderloader.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/Alvis1/a-frame-shaderloader/issues"
+  },
+  "homepage": "https://github.com/Alvis1/a-frame-shaderloader#readme",
+  "dependencies": {
+    "aframe": "^1.7.0",
+    "super-three": "^0.173.4",
+    "tsl-textures": "^3.0.1"
+  },
+  "devDependencies": {
+    "esbuild": "^0.27.3"
+  }
+}
