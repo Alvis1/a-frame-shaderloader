@@ -59,7 +59,28 @@ AFRAME.registerComponent('shader', {
       if (this._currentSrc !== tslPath) { return; }
 
       const shaderExport = module.default;
-      const shaderResult = typeof shaderExport === 'function' ? shaderExport() : shaderExport;
+
+      // Build params from exported schema defaults + HTML attribute overrides
+      const shaderSchema = module.schema || {};
+      const params = {};
+      for (const key in shaderSchema) {
+        params[key] = shaderSchema[key].default;
+      }
+      var rawAttr = HTMLElement.prototype.getAttribute.call(this.el, 'shader') || '';
+      rawAttr.split(';').forEach(function(pair) {
+        var idx = pair.indexOf(':');
+        if (idx === -1) return;
+        var key = pair.substring(0, idx).trim();
+        var val = pair.substring(idx + 1).trim();
+        if (key === 'src') return;
+        if (shaderSchema[key] && shaderSchema[key].type === 'number') {
+          params[key] = parseFloat(val);
+        } else {
+          params[key] = val;
+        }
+      });
+
+      const shaderResult = typeof shaderExport === 'function' ? shaderExport(params) : shaderExport;
 
       const material = new THREE.MeshPhysicalNodeMaterial();
 
@@ -87,6 +108,7 @@ AFRAME.registerComponent('shader', {
 
       this.disposeShaderMaterial();
       this._shaderMaterial = material;
+      this.uniforms = (shaderResult && shaderResult.uniforms) ? shaderResult.uniforms : {};
       this.applyMaterialToMesh(mesh, material);
     } catch (err) {
       console.error(`Failed to load TSL shader from ${tslPath}`, err);

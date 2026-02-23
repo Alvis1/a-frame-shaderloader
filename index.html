@@ -4,6 +4,16 @@
 <head>
   <script src="./js/aframe-171-a-0.1.min.js"></script>
   <script src="./js/a-frame-shaderloader-0.2.js"></script>
+  <script>
+    AFRAME.registerComponent('animate-disp', {
+      tick: function (t) {
+        var comp = this.el.components.shader;
+        if (comp && comp.uniforms && comp.uniforms.DispAmount) {
+          comp.uniforms.DispAmount.value = ((t / 1000) % 5);
+        }
+      }
+    });
+  </script>
 </head>
 
 <body>
@@ -17,30 +27,35 @@
 
     <a-entity id="d01" scale="0.03 0.03 0.03" position="-4 0 -4" gltf-model="#Rodin-gltf" rotation="0 35 0"></a-entity>
 
-    <a-entity id="d02" shader="src: TSL/fire.js" scale="0.03 0.03 0.03" position="-2 0 -4"
-      gltf-model="#Rodin-gltf" rotation="0 35 0"></a-entity>
+    <a-entity id="d02" shader="src: TSL/fire.js" scale="0.03 0.03 0.03" position="-2 0 -4" gltf-model="#Rodin-gltf"
+      rotation="0 35 0"></a-entity>
 
-    <a-entity id="d03" shader="src: TSL/water.js" scale="0.03 0.03 0.03" position="0 0 -4"
-      gltf-model="#Rodin-gltf" rotation="0 35 0"></a-entity>
+    <a-entity id="d03" shader="src: TSL/water.js" scale="0.03 0.03 0.03" position="0 0 -4" gltf-model="#Rodin-gltf"
+      rotation="0 35 0"></a-entity>
 
-    <a-entity id="d04" shader="src: TSL/noise.js" position="2 0 -4" scale="0.03 0.03 0.03"
-      gltf-model="#Rodin-gltf" rotation="0 35 0"></a-entity>
+    <a-entity id="d04" shader="src: TSL/noise.js" position="2 0 -4" scale="0.03 0.03 0.03" gltf-model="#Rodin-gltf"
+      rotation="0 35 0"></a-entity>
 
-    <a-entity id="d05" shader="src: TSL/outline.js" position="4 0 -4" scale="0.03 0.03 0.03"
-      gltf-model="#Rodin-gltf" rotation="0 35 0"></a-entity>
+    <a-entity id="d05" shader="src: TSL/outline.js" position="4 0 -4" scale="0.03 0.03 0.03" gltf-model="#Rodin-gltf"
+      rotation="0 35 0"></a-entity>
 
     <!-- Row 2: TSL shaders -->
-    <a-entity id="d06" shader="src: TSL/bricks.js" scale="0.03 0.03 0.03" position="-2 0 -2"
-      gltf-model="#Rodin-gltf" rotation="0 35 0"></a-entity>
+    <a-entity id="d06" shader="src: TSL/galaxy.js" scale="0.03 0.03 0.03" position="-2 0 -2" gltf-model="#Rodin-gltf"
+      rotation="0 35 0"></a-entity>
 
-    <a-entity id="d07" shader="src: TSL/multicam.js" scale="0.03 0.03 0.03" position="0 0 -2"
-      gltf-model="#Rodin-gltf" rotation="0 35 0"></a-entity>
+    <a-entity id="d07" shader="src: TSL/multicam.js" scale="0.03 0.03 0.03" position="0 0 -2" gltf-model="#Rodin-gltf"
+      rotation="0 35 0"></a-entity>
 
-    <a-entity id="d08" shader="src: TSL/redgreennoise.js" scale="0.03 0.03 0.03" position="2 0 -2"
-      gltf-model="#Rodin-gltf" rotation="0 35 0"></a-entity>
+
+    <a-entity id="d08" shader="src: TSL/fastshadertest01.js; DispAmount: 1" animate-disp
+      scale="0.03 0.03 0.03" position="2 1 -2" gltf-model="#Rodin-gltf" rotation="0 35 0"></a-entity>
+
+
+
+
 
     <!-- Row 3: additional converted shaders -->
-    <a-plane id="d09" shader="src: TSL/transWall.js" position="-2 1.5 0" width="2" height="2"></a-plane>
+    <a-plane id="d09" shader="src: TSL/transWall.js" position="-2 1.5 0" width="20" height="2"></a-plane>
 
     <a-plane id="d10" shader="src: TSL/terrain-river.js" rotation="-90 0 0" width="4" height="4"
       position="2 0.02 0"></a-plane>
