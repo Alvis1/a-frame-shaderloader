@@ -23,40 +23,40 @@ await esbuild.build({
   logLevel: 'info',
 });
 
-// 2. Generate three-tsl shim: re-exports window.THREE.TSL as ESM named exports
+// 2. Generate combined tsl-shim.js: re-exports THREE, THREE.TSL, and tslTextures as ESM
 const THREE = await import(path.join(root, 'node_modules', 'three', 'build', 'three.webgpu.min.js'));
 const tslNames = Object.keys(THREE.TSL).sort();
-const shimSource = [
-  '// Auto-generated shim — re-exports THREE.TSL from the global scope',
-  'const _T = window.THREE.TSL;',
-  'export const { ' + tslNames.join(', ') + ' } = _T;',
-  '',
-].join('\n');
-fs.writeFileSync(path.join(jsDir, 'three-tsl-shim.js'), shimSource);
-console.log(`  js/three-tsl-shim.js  ${(shimSource.length / 1024).toFixed(1)}kb`);
-
-// 3. Generate three shim: re-exports window.THREE as ESM named exports
 const threeNames = Object.keys(THREE).filter(k => k !== 'default').sort();
-const threeShimSource = [
-  '// Auto-generated shim — re-exports window.THREE as ESM',
-  'const _T = window.THREE;',
-  'export default _T;',
-  'export const { ' + threeNames.join(', ') + ' } = _T;',
-  '',
-].join('\n');
-fs.writeFileSync(path.join(jsDir, 'three-shim.js'), threeShimSource);
-console.log(`  js/three-shim.js  ${(threeShimSource.length / 1024).toFixed(1)}kb`);
 
-// 4. Generate tsl-textures shim: re-exports window.tslTextures as ESM
 // tsl-textures references `window` at top level; polyfill for Node.js
 globalThis.window = globalThis;
 const tslTex = await import('tsl-textures');
 const texNames = Object.keys(tslTex).filter(k => k !== 'default').sort();
-const texShimSource = [
-  '// Auto-generated shim — re-exports window.tslTextures as ESM',
-  'const _T = window.tslTextures;',
-  'export const { ' + texNames.join(', ') + ' } = _T;',
+
+const shimSource = [
+  '// Auto-generated combined shim — re-exports window.THREE, THREE.TSL, and tslTextures as ESM',
+  '// Spread THREE.TSL into a mutable copy so we can patch in fallbacks (THREE.TSL may be frozen)',
+  'const _THREE = window.THREE;',
+  'const _raw = (_THREE && _THREE.TSL) || {};',
+  'const _tex = window.tslTextures || {};',
+  'const _TSL = { ..._raw,',
+  '  ...(!_raw.hsl && _tex.hsl ? { hsl: _tex.hsl } : {}),',
+  '  ...(!_raw.toHsl && _tex.toHsl ? { toHsl: _tex.toHsl } : {}),',
+  '};',
+  'if (!_THREE || !_THREE.TSL) {',
+  "  console.warn('[tsl-shim] THREE.TSL not available — IIFE bundle may not have loaded yet');",
+  '}',
+  '',
+  '// --- THREE (import from \'three\' / \'three/webgpu\') ---',
+  'export default _THREE;',
+  'export const { ' + threeNames.join(', ') + ' } = _THREE;',
+  '',
+  '// --- THREE.TSL (import from \'three/tsl\') ---',
+  'export const { ' + tslNames.join(', ') + ' } = _TSL;',
+  '',
+  '// --- tsl-textures (import from \'tsl-textures\') ---',
+  'export const { ' + texNames.join(', ') + ' } = _tex;',
   '',
 ].join('\n');
-fs.writeFileSync(path.join(jsDir, 'tsl-textures-shim.js'), texShimSource);
-console.log(`  js/tsl-textures-shim.js  ${(texShimSource.length / 1024).toFixed(1)}kb`);
+fs.writeFileSync(path.join(jsDir, 'tsl-shim.js'), shimSource);
+console.log(`  js/tsl-shim.js  ${(shimSource.length / 1024).toFixed(1)}kb`);
