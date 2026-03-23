@@ -285,11 +285,12 @@ function fixTSLShadowing(source) {
 var _scriptDir = (document.currentScript && document.currentScript.src) || '';
 var _baseDir = _scriptDir ? _scriptDir.substring(0, _scriptDir.lastIndexOf('/') + 1) : '';
 var _shimUrl = _baseDir + 'tsl-shim.js';
+var _tslTexturesShimUrl = _baseDir + 'tsl-textures-shim.js';
 const specifierMap = {
   'three':         _shimUrl,
   'three/webgpu':  _shimUrl,
   'three/tsl':     _shimUrl,
-  'tsl-textures':  _shimUrl
+  'tsl-textures':  _tslTexturesShimUrl
 };
 
 // Resolve a bare specifier using the built-in map.
