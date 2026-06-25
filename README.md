@@ -9,13 +9,13 @@ An A-Frame component that applies [TSL](https://github.com/mrdoob/three.js/wiki/
 ### Setup
 
 ```html
-<script src="js/aframe-171-a-0.1.min.js"></script>
-<script src="js/a-frame-shaderloader-0.3.js"></script>
+<script src="js/a-frame-180-a-01.min.js"></script>
+<script src="js/a-frame-shaderloader-0.4.js"></script>
 ```
 
-`aframe-171-a-0.1.min.js` packages A-Frame 1.7, Three.js r173 (WebGPU build), and [tsl-textures](https://boytchev.github.io/tsl-textures/).
+`a-frame-180-a-01.min.js` packages A-Frame 1.8.0, Three.js r184 (WebGPU build), and [tsl-textures](https://boytchev.github.io/tsl-textures/).
 
-`a-frame-shaderloader-0.3.js` handles TDZ fixes, auto-import injection, bare specifier resolution, property uniform schema, and Object API support (`colorNode`, `positionNode`, `normalNode`, etc.).
+`a-frame-shaderloader-0.4.js` handles TDZ fixes, auto-import injection, bare specifier resolution, property uniform schema, and Object API support (`colorNode`, `positionNode`, `normalNode`, etc.).
 
 ### Usage
 

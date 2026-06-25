@@ -2,14 +2,15 @@
 <html>
 
 <head>
-  <script src="./js/aframe-171-a-0.1.min.js"></script>
-  <script src="./js/a-frame-shaderloader-0.2.js"></script>
+  <script src="./js/a-frame-180-a-01.min.js"></script>
+  <script src="./js/a-frame-shaderloader-0.4.js"></script>
   <script>
     AFRAME.registerComponent('animate-disp', {
       tick: function (t) {
         var comp = this.el.components.shader;
-        if (comp && comp.uniforms && comp.uniforms.DispAmount) {
-          comp.uniforms.DispAmount.value = ((t / 1000) % 5);
+        // shaderloader 0.4 exposes property uniforms as _propertyUniforms.
+        if (comp && comp._propertyUniforms && comp._propertyUniforms.DispAmount) {
+          comp._propertyUniforms.DispAmount.value = ((t / 1000) % 5);
         }
       }
     });
