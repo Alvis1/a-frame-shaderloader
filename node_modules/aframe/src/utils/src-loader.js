@@ -116,6 +116,17 @@ export function parseUrl (src) {
   return parsedSrc[1];
 }
 
+var IMAGE_EXTENSIONS = ['jpg', 'jpeg', 'png', 'webp', 'avif'];
+
+/**
+ * Get file extension from URL (without query string or hash).
+ */
+function getExtension (src) {
+  var pathname = src.split('?')[0].split('#')[0];
+  var ext = pathname.split('.').pop().toLowerCase();
+  return ext;
+}
+
 /**
  * Call back whether `src` is an image.
  *
@@ -124,11 +135,20 @@ export function parseUrl (src) {
  */
 function checkIsImage (src, onResult) {
   var request;
+  var ext;
 
   if (src.tagName) {
     onResult(src.tagName === 'IMG');
     return;
   }
+
+  // Check file extension first to avoid HEAD request for common image extensions.
+  ext = getExtension(src);
+  if (IMAGE_EXTENSIONS.indexOf(ext) !== -1) {
+    onResult(true);
+    return;
+  }
+
   request = new XMLHttpRequest();
 
   // Try to send HEAD request to check if image first.
@@ -139,21 +159,31 @@ function checkIsImage (src, onResult) {
       contentType = request.getResponseHeader('Content-Type');
       if (contentType == null) {
         checkIsImageFallback(src, onResult);
+      } else if (contentType.startsWith('image')) {
+        onResult(true);
       } else {
-        if (contentType.startsWith('image')) {
-          onResult(true);
-        } else {
-          onResult(false);
-        }
+        onResult(false);
       }
     } else {
+      // Non-success status (3xx redirects, 404, 405, etc.) - try loading via Image tag
+      // as it handles redirects and the server might not support HEAD requests.
       checkIsImageFallback(src, onResult);
     }
     request.abort();
   });
+  request.addEventListener('error', function () {
+    // Network error (CORS, etc.) - try loading via Image tag.
+    checkIsImageFallback(src, onResult);
+  });
   request.send();
 }
 
+/**
+ * Try loading src as an image to determine if it's an image.
+ *
+ * @param {string} src - URL to test.
+ * @param {function} onResult - Callback with result.
+ */
 function checkIsImageFallback (src, onResult) {
   var tester = new Image();
   tester.addEventListener('load', onLoad);

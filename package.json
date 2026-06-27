@@ -19,8 +19,8 @@
   },
   "homepage": "https://github.com/Alvis1/a-frame-shaderloader#readme",
   "dependencies": {
-    "aframe": "^1.7.0",
-    "super-three": "^0.173.4",
+    "aframe": "1.8.0",
+    "super-three": "0.184.0",
     "tsl-textures": "^3.0.1"
   },
   "devDependencies": {
