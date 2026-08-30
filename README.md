@@ -47,10 +47,47 @@ console.
 
 | File | Size | What it is |
 | --- | --- | --- |
-| `a-frame-180-a-01.min.js` | 1.6 MB | One IIFE bundle of **A-Frame 1.8.0**, **Three.js r184 (WebGPU build)** and [tsl-textures](https://boytchev.github.io/tsl-textures/), built by `build/build.mjs` with esbuild. It installs a single shared `window.THREE` (and `window.tslTextures`) — which is why no import map is needed. |
+| `a-frame-180-a-01.min.js` | 1.6 MB | One IIFE bundle of **A-Frame 1.8.0**, **Three.js r184 (WebGPU build)** and [tsl-textures](https://boytchev.github.io/tsl-textures/), built by `build/build.mjs` with esbuild. It installs a single shared `window.THREE` (and `window.tslTextures`) — which is why no import map is needed. It also carries one patch: the [`backend` renderer property](#choosing-the-renderer-backend). |
 | `a-frame-shaderloader-0.5.js` | 31 KB | The `shader` component. **Current version.** |
 | `a-frame-shaderloader-0.4.js` | 20 KB | **Frozen.** Shaders exported before 0.5 reference it from the CDN, so it must never be edited. New work goes into 0.5 or a bump. |
 | `aframe-orbit-controls.min.js` | 25 KB | Optional orbit camera. Not required to apply shaders. |
+
+
+## Choosing the renderer backend
+
+This bundle is the three.js **WebGPU** build, so A-Frame constructs a
+`WebGPURenderer`, which takes the WebGPU backend whenever `navigator.gpu`
+exists. three then refuses to enter WebXR on it:
+
+> `THREE.XRManager: XR is currently not supported with a WebGPU backend. Use WebGL by passing "{ forceWebGL: true }" to the constructor of the renderer.`
+
+So any page that can enter VR has to force the WebGL2 backend. Set it on the
+scene:
+
+```html
+<a-scene renderer="backend: webgl">
+```
+
+`backend` is `auto` (WebGPU when available, WebGL 2 otherwise) or `webgl`
+(three's `forceWebGL`). Measured in Chrome with `navigator.gpu` present:
+`backend: webgl` → WebGL2 backend, no attribute → WebGPU backend.
+
+This property is **a patch carried in `build/build.mjs`**, not something A-Frame
+ships — it is the relevant half of [aframevr/aframe#5847][pr5847], which is open
+at the time of writing while A-Frame 1.8.0 remains the latest release. When that
+merges, delete `patchAframeRenderer()` and rebuild; the attribute keeps working.
+
+three r185 does *not* remove the need. It landed native WebGPU XR
+(`XRGPUBinding`), but a WebGPU backend still throws unless the XR session was
+granted the `"webgpu"` feature — and A-Frame requests only
+`local-floor`/`bounded-floor`, while Quest Browser implements no `XRGPUBinding`
+at all.
+
+The alternative this replaces is hiding `navigator.gpu` in an inline `<script>`
+before the bundle loads. That still works, but it is a global monkey-patch per
+document; the attribute is per scene and declarative.
+
+[pr5847]: https://github.com/aframevr/aframe/pull/5847
 
 ## Usage
 
