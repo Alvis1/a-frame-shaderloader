@@ -20,7 +20,7 @@ shim:
 
 ```html
 <script src="https://cdn.jsdelivr.net/gh/Alvis1/a-frame-shaderloader@master/js/a-frame-180-a-01.min.js"></script>
-<script src="https://cdn.jsdelivr.net/gh/Alvis1/a-frame-shaderloader@master/js/a-frame-shaderloader-0.5.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/Alvis1/a-frame-shaderloader@master/js/a-frame-shaderloader-0.8.js"></script>
 <!-- optional: orbit camera controls -->
 <script src="https://cdn.jsdelivr.net/gh/Alvis1/a-frame-shaderloader@master/js/aframe-orbit-controls.min.js"></script>
 ```
@@ -29,9 +29,20 @@ or the same three files locally:
 
 ```html
 <script src="js/a-frame-180-a-01.min.js"></script>
-<script src="js/a-frame-shaderloader-0.5.js"></script>
+<script src="js/a-frame-shaderloader-0.8.js"></script>
 <script src="js/aframe-orbit-controls.min.js"></script>
 ```
+
+Copy `js/decoders/` beside the loader too if you load Draco-, meshopt-compressed
+or KTX2-textured glTF: loaded from an http(s) URL, 0.8 fetches its decoders
+from the `decoders/` folder next to its own script, so a local copy without it
+answers a compressed model with a 404 and a `model-error`. Alternatively set the
+`gltf-model` system's `dracoDecoderPath` (`<a-scene gltf-model="dracoDecoderPath: …">`)
+to keep A-Frame's own Draco decoder; meshopt still comes from `js/decoders/`.
+
+The loader must come AFTER the bundle and BEFORE the scene markup. Without
+A-Frame on the page it still installs its plain-three.js core — see
+[Plain three.js](#plain-threejs-no-a-frame).
 
 > **Note the `@master`.** This repository has no `main` branch, so a `@main`
 > URL 404s — and jsDelivr caches the 404, so it does not heal itself. After
@@ -48,9 +59,12 @@ console.
 | File | Size | What it is |
 | --- | --- | --- |
 | `a-frame-180-a-01.min.js` | 1.6 MB | One IIFE bundle of **A-Frame 1.8.0**, **Three.js r184 (WebGPU build)** and [tsl-textures](https://boytchev.github.io/tsl-textures/), built by `build/build.mjs` with esbuild. It installs a single shared `window.THREE` (and `window.tslTextures`) — which is why no import map is needed. It also carries one patch: the [`backend` renderer property](#choosing-the-renderer-backend). |
-| `a-frame-shaderloader-0.5.js` | 31 KB | The `shader` component. **Current version.** |
-| `a-frame-shaderloader-0.4.js` | 20 KB | **Frozen.** Shaders exported before 0.5 reference it from the CDN, so it must never be edited. New work goes into 0.5 or a bump. |
+| `a-frame-shaderloader-0.8.js` | 116 KB | **Current version.** The plain-three.js core (`globalThis.FastShaders`) and the A-Frame `shader` component, which is registered only when A-Frame is on the page. New work goes here, and it is additive only: every edit reaches every shader already exported against it. |
+| `a-frame-shaderloader-0.6.js` | 56 KB | **Frozen.** Shaders exported before 0.8 fetch it from the CDN, so it must never be edited. It requires A-Frame at evaluation (it calls `AFRAME.registerComponent` at the top level), including through the `./0.6` package export. |
+| `a-frame-shaderloader-0.5.js` | 31 KB | **Frozen.** Shaders exported before 0.6 reference it from the CDN. |
+| `a-frame-shaderloader-0.4.js` | 20 KB | **Frozen.** Shaders exported before 0.5 reference it from the CDN. |
 | `aframe-orbit-controls.min.js` | 25 KB | Optional orbit camera. Not required to apply shaders. |
+| `decoders/` | 865 KB | three r184's glTF Draco decoder (`draco_wasm_wrapper.js` + `draco_decoder.wasm`), its meshopt decoder (`meshopt_decoder.module.js`) and the Basis Universal transcoder KTX2 textures need (`basis_transcoder.js` + `basis_transcoder.wasm`), with the Apache-2.0 text for the Draco AND Basis files in its `README.md`. 0.8 installs them on every `GLTFLoader` and fetches them from beside its own script, only when a model needs them. |
 
 
 ## Choosing the renderer backend
@@ -231,12 +245,199 @@ The component emits two entity events (both bubble):
 | `shader-error` | `{ src, message }` | fetch/compile/apply failed — the original materials have been restored |
 
 Both carry a staleness guard, so a superseded load can neither install a
-material nor surface an error over a newer shader.
+material nor surface an error over a newer shader. `src` is `'model'` for a
+shader stored inside the model (see [Shader inside the model](#shader-inside-the-model-src-model)).
+
+## Plain three.js (no A-Frame)
+
+0.8 is a plain three.js loader too. Without A-Frame on the page it installs
+`globalThis.FastShaders` and nothing else; with A-Frame it installs the same
+object beside the component. Three is pinned to **0.184.0**, the revision the
+loader is written for.
+
+```html
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.184.0/build/three.webgpu.min.js",
+    "three/webgpu": "https://cdn.jsdelivr.net/npm/three@0.184.0/build/three.webgpu.min.js",
+    "three/tsl": "https://cdn.jsdelivr.net/npm/three@0.184.0/build/three.tsl.min.js"
+  }
+}
+</script>
+<script src="https://cdn.jsdelivr.net/gh/Alvis1/a-frame-shaderloader@master/js/a-frame-shaderloader-0.8.js"></script>
+<script type="module">
+  import * as THREE from 'three/webgpu';
+
+  FastShaders.use(THREE);                                  // the three/webgpu namespace
+  const shader = await FastShaders.load('./myshader.js');  // fetch + the four transforms + import
+
+  const renderer = new THREE.WebGPURenderer({ antialias: true });
+  renderer.setSize(innerWidth, innerHeight);
+  document.body.appendChild(renderer.domElement);
+  await renderer.init();
+
+  const scene = new THREE.Scene();
+  const camera = new THREE.PerspectiveCamera(50, innerWidth / innerHeight, 0.1, 100);
+  camera.position.set(0, 0, 3);
+  scene.add(new THREE.AmbientLight(0xffffff, 0.6));
+  const key = new THREE.DirectionalLight(0xffffff, 2);
+  key.position.set(2, 3, 2);
+  scene.add(key);
+
+  const mesh = new THREE.Mesh(new THREE.SphereGeometry(0.8, 64, 32));
+  scene.add(mesh);
+  const binding = FastShaders.apply(mesh, shader, { values: { speed: 2 } });
+
+  renderer.setAnimationLoop(() => renderer.render(scene, camera));
+</script>
+```
+
+`FastShaders.use(THREE)` takes the **`three/webgpu` namespace** (it must carry
+`MeshPhysicalNodeMaterial` and `TSL`) and throws on anything else. It also sets
+`globalThis.THREE` when the page has none, because a module that bakes a
+texture (FastShaders' Image, Data and Colormap nodes) builds it from that
+global; it warns when a different instance is already there.
+
+`FastShaders.apply(target, shader, options)` is synchronous and does what the
+component does: the uniforms from `schema`, the material (the Simple and Object
+APIs, the emissive-to-colour fallback, the four material flags), `parts` by
+mesh name, the weld and the barycentric corners. It throws on failure, after
+putting the target back. The **Binding** it returns:
+
+| Member | What it is |
+| --- | --- |
+| `uniforms` | The property uniforms by name, in a null-prototype object |
+| `set(name, value)` | Set one: a number, a colour (`'#33ccff'`, a `THREE.Color`) or, for a `map`, a `THREE.Texture`, an element or a URL. `false` for a name the shader does not declare |
+| `material`, `parts`, `applied` | The default material, the part materials (a `Map` by mesh name), and what each mesh ended up wearing (by `uuid`) |
+| `materialParts` | For a module that returns `materialParts`: `{ status, applied, dropped, expected, found }` (see glTF models below); otherwise `null` |
+| `dispose()` | Put the target's own materials and geometry back and release what the apply built. A second call does nothing |
+| `target`, `module`, `source`, `url`, `state` | What was applied, to what |
+
+Options: `values` (initial property values), `weld` (`'auto'`, `true` or
+`false`), `source` and `url` (see below), and `textures` (your own texture
+adapter for `map` values).
+
+**The weld** runs, as under A-Frame, only when the shader displaces
+(`positionNode`) and the module does not return `mergeVertices: false`. Under
+`'auto'` it runs only on a mesh whose `geometry.type` is one of three's own
+primitives (`BoxGeometry`, `SphereGeometry`, …): a loaded model's plain
+`BufferGeometry` is never welded, because the rebuild would drop vertex
+colours, skin weights and morph targets. `weld: true` welds anyway, and
+`weld: false` never does.
+
+**glTF models.** A module may also shade by glTF material index:
+`materialParts: { "0": { colorNode, … } }` next to a `modelSignature:
+{ materials: [...] }` naming the model's materials in order. The loader learns
+which glTF material each mesh came from while the model is PARSED, so register
+its plugin on your `GLTFLoader` before loading:
+
+```js
+const loader = new GLTFLoader();
+loader.register(FastShaders.gltfPlugin);
+const gltf = await loader.loadAsync('./model.glb');
+FastShaders.apply(gltf.scene, shader);
+```
+
+The table applies only when `modelSignature` equals the loaded model exactly
+(`FastShaders.modelSignature(gltf)` gives you the value to write). Otherwise, or
+without the plugin, it is skipped with one warning and the Binding's
+`materialParts.status` says why (`mismatch`, `no-record`, …); `parts` by mesh
+name and the default material still apply, and every other mesh wears its
+authored material. A clone of `gltf.scene` has no
+record. Under A-Frame nothing is needed: the loader registers the plugin on
+every `gltf-model` itself.
+
+**Compressed glTF.** `FastShaders.decoders.install(loader)` gives a
+`GLTFLoader` the Draco and meshopt decoders in `js/decoders/`, fetched from
+beside the loader's script (from jsDelivr, when you load it from there). The
+`three/webgpu` namespace has no `DRACOLoader`, so import it from
+`three/addons/loaders/DRACOLoader.js` — add a `"three/addons/":
+"https://cdn.jsdelivr.net/npm/three@0.184.0/examples/jsm/"` entry to the import
+map, where `GLTFLoader` lives too — and pass it to `configure()` first:
+
+```js
+import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
+import { KTX2Loader } from 'three/addons/loaders/KTX2Loader.js';
+
+// KTX2 also needs the renderer: its transcode target depends on what the GPU has.
+FastShaders.decoders.configure({ DRACOLoader, KTX2Loader, renderer });
+FastShaders.decoders.install(loader); // before loader.loadAsync(…)
+```
+
+`LoadingManager` comes from the namespace `use()` bound, and a `resolve(file)`
+option points the three file names somewhere else. A decoder that could not be
+installed leaves its reason in `FastShaders.decoders.lastError`. Under A-Frame
+nothing is needed here either: the loader installs them on every `gltf-model`,
+and keeps A-Frame's own Draco decoder when the page set a `dracoDecoderPath`.
+
+**Prefer `load()`.** `apply()` also accepts a module you imported yourself (or
+its default export), but then the only source it can read is the default
+export's own text. That text is what the schema auto-detection and the weld's
+"does it read `uv()`?" test look at, so a `params.x` or a `uv()` outside the
+default function goes unseen; pass `{ source }` to supply the whole module.
+And an import you do yourself skips the four transforms below, so the module
+has to resolve its own `three/tsl` imports through your import map.
+
+### A shader stored inside a .glb
+
+A FastShaders single-GLB export carries its shader module inside the file (see
+[Shader inside the model](#shader-inside-the-model-src-model)). With the glTF
+plugin registered before loading, `applyFromGltf` runs it on the model and
+returns the same Binding `apply()` does:
+
+```js
+const loader = new GLTFLoader();
+loader.register(FastShaders.gltfPlugin);
+const gltf = await loader.loadAsync('./my-shader.glb');
+scene.add(gltf.scene);
+const binding = await FastShaders.applyFromGltf(gltf, { values: { speed: 2 } });
+// …
+binding.dispose(); // the model's own materials come back
+```
+
+`FastShaders.loadFromGltf(gltf)` gives you the loaded module instead, to
+`apply()` to several targets; call its `release()` once every binding using it
+is disposed. Both reject, and change nothing, when the file carries no shader
+or a damaged one.
+
+**`threeRevision`.** A module that declares `export const threeRevision = '184'`
+is compared with the page's three, and so is the loader's own revision. A
+mismatch prints one warning per pair and never stops the shader; a value that
+is not a plain revision number is ignored.
+
+`FastShaders.fetch` and `FastShaders.importSource` replace `load()`'s two
+network legs (the `fetch` and the Blob-URL `import()`), for pages and tests
+that need to.
+
+## Shader inside the model (`src: model`)
+
+A FastShaders single-GLB export stores its shader module, and the images that
+shader uses, inside the `.glb`. Opt in on the entity that loads it:
+
+```html
+<a-entity gltf-model="url(my-shader.glb)" shader="src: model"></a-entity>
+```
+
+Property values work as they do with a URL (`shader="src: model; speed: 2"`).
+The images come from the same file: each image placeholder in the module
+becomes a `blob:` URL of the model's own bytes, alive for as long as the shader
+is applied. If the file carries no shader, or a damaged one, the model keeps its
+own materials, the console says why, and `shader-error` fires. Relative imports
+inside the module resolve against the model's URL. It needs loader 0.8; 0.6
+reads `model` as a file path, fails, and keeps the authored materials.
+
+**Never use `src: model` on a page that loads models other people supply: the
+shader inside runs with your page's privileges, exactly like a script tag.** A
+page that must never run a model's code can call
+`FastShaders.disableModelModules()`, a one-way switch.
 
 ## What the loader does to your source
 
 Before importing the module it runs four transforms, which is what lets an
-ordinary `three/tsl` module run against a single global Three.js:
+ordinary `three/tsl` module run against a single global Three.js. 0.8 runs
+0.6's transforms unchanged and exposes them as `FastShaders.transforms`
+(`FastShaders.prepareSource(text, moduleUrl)` runs all four in order):
 
 1. **Auto-inject missing `three/tsl` imports** — scans for TSL symbols used but
    not imported and appends them to the existing import list, validating each
