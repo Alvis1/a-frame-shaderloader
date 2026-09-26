@@ -13,6 +13,7 @@
   "sideEffects": true,
   "scripts": {
     "build": "node build/build.mjs",
+    "build:splat": "node build/build-splat.mjs",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {

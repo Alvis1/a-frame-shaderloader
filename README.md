@@ -59,12 +59,13 @@ console.
 | File | Size | What it is |
 | --- | --- | --- |
 | `a-frame-180-a-01.min.js` | 1.6 MB | One IIFE bundle of **A-Frame 1.8.0**, **Three.js r184 (WebGPU build)** and [tsl-textures](https://boytchev.github.io/tsl-textures/), built by `build/build.mjs` with esbuild. It installs a single shared `window.THREE` (and `window.tslTextures`) — which is why no import map is needed. It also carries one patch: the [`backend` renderer property](#choosing-the-renderer-backend). |
-| `a-frame-shaderloader-0.8.js` | 116 KB | **Current version.** The plain-three.js core (`globalThis.FastShaders`) and the A-Frame `shader` component, which is registered only when A-Frame is on the page. New work goes here, and it is additive only: every edit reaches every shader already exported against it. |
+| `a-frame-shaderloader-0.8.js` | 168 KB | **Current version.** The plain-three.js core (`globalThis.FastShaders`) and the A-Frame `shader` component, which is registered only when A-Frame is on the page. New work goes here, and it is additive only: every edit reaches every shader already exported against it. |
 | `a-frame-shaderloader-0.6.js` | 56 KB | **Frozen.** Shaders exported before 0.8 fetch it from the CDN, so it must never be edited. It requires A-Frame at evaluation (it calls `AFRAME.registerComponent` at the top level), including through the `./0.6` package export. |
 | `a-frame-shaderloader-0.5.js` | 31 KB | **Frozen.** Shaders exported before 0.6 reference it from the CDN. |
 | `a-frame-shaderloader-0.4.js` | 20 KB | **Frozen.** Shaders exported before 0.5 reference it from the CDN. |
 | `aframe-orbit-controls.min.js` | 25 KB | Optional orbit camera. Not required to apply shaders. |
 | `decoders/` | 865 KB | three r184's glTF Draco decoder (`draco_wasm_wrapper.js` + `draco_decoder.wasm`), its meshopt decoder (`meshopt_decoder.module.js`) and the Basis Universal transcoder KTX2 textures need (`basis_transcoder.js` + `basis_transcoder.wasm`), with the Apache-2.0 text for the Draco AND Basis files in its `README.md`. 0.8 installs them on every `GLTFLoader` and fetches them from beside its own script, only when a model needs them. |
+| `fs-splat-0.1.js` | 55 KB | Optional. The Gaussian-splat runtime: three r186's `GaussianSplat` addon and its `.splat` / `.spz` / `.ply` / `.ksplat` loaders, bundled against the page's own three (see [Gaussian splats](#gaussian-splats)). Load it after the bundle, only on pages that show splats. Built by `build/build-splat.mjs` from the unedited sources in `splat/` (MIT, provenance and hashes in `splat/README.md`). |
 
 
 ## Choosing the renderer backend
@@ -237,14 +238,15 @@ and two properties sharing an image do not burn two texture binding slots.
 
 ## Events
 
-The component emits two entity events (both bubble):
+The component emits these entity events (all bubble):
 
 | Event | Detail | When |
 | --- | --- | --- |
 | `shader-applied` | `{ src }` | the material is installed |
 | `shader-error` | `{ src, message }` | fetch/compile/apply failed — the original materials have been restored |
+| `shader-splat` | `{ src, splats }` | a module returning `splat` wrapped `splats` (≥ 1) Gaussian splats; fired just before `shader-applied` (see [Gaussian splats](#gaussian-splats)) |
 
-Both carry a staleness guard, so a superseded load can neither install a
+All carry a staleness guard, so a superseded load can neither install a
 material nor surface an error over a newer shader. `src` is `'model'` for a
 shader stored inside the model (see [Shader inside the model](#shader-inside-the-model-src-model)).
 
@@ -311,6 +313,7 @@ putting the target back. The **Binding** it returns:
 | `set(name, value)` | Set one: a number, a colour (`'#33ccff'`, a `THREE.Color`) or, for a `map`, a `THREE.Texture`, an element or a URL. `false` for a name the shader does not declare |
 | `material`, `parts`, `applied` | The default material, the part materials (a `Map` by mesh name), and what each mesh ended up wearing (by `uuid`) |
 | `materialParts` | For a module that returns `materialParts`: `{ status, applied, dropped, expected, found }` (see glTF models below); otherwise `null` |
+| `splats` | How many Gaussian splats the module's `splat` spec is shading; `0` without one, and after `dispose()` |
 | `dispose()` | Put the target's own materials and geometry back and release what the apply built. A second call does nothing |
 | `target`, `module`, `source`, `url`, `state` | What was applied, to what |
 
@@ -432,6 +435,101 @@ shader inside runs with your page's privileges, exactly like a script tag.** A
 page that must never run a model's code can call
 `FastShaders.disableModelModules()`, a one-way switch.
 
+## Gaussian splats
+
+0.8 can shade **3D Gaussian splats** (three r186's `GaussianSplat` addon):
+cut them with any distance field, recolour them, fade them and move them —
+procedurally, per splat, animatable with `time` or any uniform. It edits how
+the splats are drawn, never the file.
+
+Load the runtime after the bundle, give an entity a splat file with
+`splat-model`, and point `shader` at a module that returns `splat`:
+
+```html
+<script src="https://cdn.jsdelivr.net/gh/Alvis1/a-frame-shaderloader@master/js/a-frame-180-a-01.min.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/Alvis1/a-frame-shaderloader@master/js/a-frame-shaderloader-0.8.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/Alvis1/a-frame-shaderloader@master/js/fs-splat-0.1.js"></script>
+
+<a-entity splat-model="src: url(garden.splat); kind: splat; size: 1.6"
+          shader="src: cut.js" position="0 1.6 -3"></a-entity>
+```
+
+```js
+import { Fn, vec3, vec4, length, mix, sin, time } from 'three/tsl';
+
+export default function () {
+  return {
+    splat: {
+      // vec4(rgb, opacity): tint the splats' own colour toward blue
+      shade: Fn(([p, pw, n, c]) => vec4(mix(c.rgb, vec3(0.2, 0.4, 1), 0.3), 1)),
+      // vec4(move.xyz, cut): a gentle wave, and cut away everything outside a sphere
+      shape: Fn(([p]) => vec4(vec3(0, sin(p.x.mul(8).add(time)).mul(0.02), 0), length(p).sub(0.5))),
+      feather: 0.05,
+    },
+  };
+}
+```
+
+**`splat-model`** (in `fs-splat-0.1.js`): `src` (a URL, `url(…)` accepted),
+`kind` (`splat`, `spz`, `ply` or `ksplat` — the file's extension), `size`
+(default `1.6`: the splats are centred and their longest extent scaled to this
+many metres, so a shader tuned on a unit-sized preview fits any capture; `0`
+keeps the file's own units) and `autoSort` (default `true`). It loads through
+three's `FileLoader`, emits `model-loaded` (`{ format: 'splat', model }`, so a
+`shader` on the same entity re-applies) and then `splat-loaded`
+(`{ count, shDropped }`), or `model-error` (`{ src, message }`) with an English
+sentence. Limits: at most 1,000,000 splats; `.spz` versions 1 to 3 (gzip),
+unpacked behind a 96 MB counter — version 4 (zstd) is refused; a `.ply` must be
+a BINARY (little- or big-endian), uncompressed 3DGS PLY with a single `vertex`
+element and no `f_rest_*` — ASCII PLYs are refused (convert others to `.splat` or
+`.spz` with SuperSplat or splat-transform). View-dependent colour (spherical
+harmonics) is dropped at load: `shDropped` says which degree was present.
+
+**The `splat` key.** `{ splat: { shade, shape, size, feather, invert } }`, every
+entry optional. `shade`, `shape` and `size` receive the same four values:
+
+| Parameter | What it is |
+| --- | --- |
+| `p` | the splat's centre in object space (after `size` normalisation) |
+| `pw` | the same centre in world space |
+| `n` | the direction the splat faces, `normalize(cameraPosition - pw)` — a splat has no normal |
+| `c` | the splat's own colour, `vec4(rgb, alpha)` |
+
+- `shade(p, pw, n, c)` → `vec4(rgb, opacity)`: the splat's colour, and a
+  multiplier on its alpha. Absent: the splat's own colour.
+- `shape(p, pw, n, c)` → `vec4(move.xyz, cut)`: `move` displaces the splat;
+  **`cut > 0` removes it** (a sign test, so a signed distance field keeps its
+  inside), `invert: true` removes the other side instead, and `feather` fades
+  alpha by `clamp(1 - cut / feather, 0, 1)` across the edge.
+- `size` scales each splat's footprint: a function of the four values, a number
+  or a node. `feather` takes the same forms (default `0`); anything else is the
+  default. `invert` counts only as the literal `true`.
+
+`FastShaders.SPLAT_PARAMS` lists the parameter names. The `shader` component
+emits `shader-splat` (`{ src, splats }`) before `shader-applied`, and a plain
+three.js `Binding` reports the count as `splats`. A `Fn()` closes over the same
+`params` object as the rest of the module, so property uniforms reach it.
+
+How it works, and what it costs: the splat keeps its own material; 0.8 wraps
+its VERTEX node. A removed splat's quad collapses off screen (the addon's own
+cull), so it costs no pixels; everything runs per vertex, never per pixel, for
+two extra buffer reads per vertex. Ordinary meshes in the same entity keep
+their materials under a splat-only module, and a `GaussianSplat` is never given
+a module's material, weld or barycentric corners. Private addon fields
+(`_buffers.centerRead`, `_sort.orderRead`) are read; if a three.js update
+renames them the splat renders unedited with one console warning.
+
+Limits, stated plainly:
+
+- **The WebGL backend sorts on the CPU.** On `renderer="backend: webgl"` —
+  every VR page, and Safari — the addon re-sorts all splats on the CPU whenever
+  the view turns by about 1.8°: roughly 0.8 ms per 100,000 splats on an M4 Max,
+  far more on a standalone headset. Keep VR scenes small (≲ 250,000 splats).
+- **Displacement is for small, smooth fields.** Splats are sorted by their
+  UNMOVED depth, and each keeps the footprint shape it had there, so a large or
+  scattering move shimmers or pops.
+- A splat the addon itself culled at its unmoved position stays culled.
+
 ## What the loader does to your source
 
 Before importing the module it runs four transforms, which is what lets an
@@ -467,6 +565,20 @@ esbuild is the only dev dependency; the bundle's contents are pinned by
 `package.json` (aframe 1.8.0, super-three 0.184.0, tsl-textures ^3.0.1). The
 built file is committed, which is what lets jsDelivr serve it and lets consumers
 clone without building.
+
+```bash
+npm run build:splat   # → js/fs-splat-0.1.js
+```
+
+builds the Gaussian-splat runtime from `build/entry-splat.js` and the three
+r186 sources in `splat/`, separately so the A-Frame bundle's build stays
+byte-reproducible. It reads no three from `node_modules`: `three` and
+`three/webgpu` resolve to the page's `globalThis.THREE`, and `three/tsl` to its
+`THREE.TSL` plus an `unpackUnorm4x8` polyfill that switches itself off on r186.
+The build fails when a source's sha256 differs from `splat/README.md`, when the
+addon gains an import, or when the output would contain a gzip call or a
+`data:` fetch. Like the loaders, `fs-splat-0.1.js` is additive-only once pushed:
+exported pages fetch it by URL.
 
 ## License
 
