@@ -82,6 +82,12 @@
  *           (`_buffers.centerRead`, `_sort.orderRead`); without them it warns
  *           and edits nothing. `lit` also reads `_buffers.covarianceARead` /
  *           `covarianceBRead`; without them `n` stays the camera direction.
+ *       11. `uvDisplaced: false` in the return object says the DISPLACEMENT
+ *           reads no uv, so a displaced sphere's seam and pole fans are not
+ *           welded although the module reads uv() elsewhere (a uv-driven
+ *           COLOUR). Welding them keeps one u per vertex and squeezes the
+ *           texture into the seam column. ABSENT keeps the source test
+ *           (weldUvDriven), so every existing module behaves as before.
  *      Written for three r184. 0.6, 0.5 and 0.4 are FROZEN: shaders exported
  *      against them fetch them from the CDN by URL, so they never change.
  *      Later 0.8.x edits are ADDITIVE only — no renamed state field, method,
@@ -1539,6 +1545,22 @@ function isPrimitiveMesh(o) {
  *     structurally instead of by a regex over module text; a `parts` module
  *     is covered by testing the part materials too.
  */
+/*
+ * Do the weld's groups with DIFFERING UVs need merging (weldByPosition's
+ * `uvDriven`)? Only when a uv-driven height can pull a sphere's seam and pole
+ * fans apart. The module source is the one thing to ask — the built material
+ * cannot say what its positionNode reads — so ANY uv() in it answers yes,
+ * which also welds for a uv() that only drives COLOUR. That is not free: a
+ * welded seam vertex keeps one u, so the strip of triangles beside the seam
+ * stretches the whole texture back from 1 to 0 — a squeezed vertical line.
+ * The editor knows the graph, and says so with `uvDisplaced: false` (=== false;
+ * ABSENT keeps the source test, so every existing module behaves as before).
+ */
+function weldUvDriven(shaderResult, source) {
+  if (shaderResult && shaderResult.uvDisplaced === false) return false;
+  return /\buv\s*\(/.test(source);
+}
+
 function shouldWeld(shaderResult, material, partMaterials, isPrimitive, indexMaterials) {
   if (!isPrimitive) return false;
   if (shaderResult && shaderResult.mergeVertices === false) return false;
@@ -2126,9 +2148,9 @@ function applyResult(state, mesh, loaded, hooks) {
     indexMaterials,
   );
   // A shader that reads uv() can displace a sphere's seam and pole fans
-  // apart despite their shared normals, so those groups must weld too.
-  // Read off the SOURCE because the built material cannot be asked.
-  state._weldUvDriven = /\buv\s*\(/.test(source);
+  // apart despite their shared normals, so those groups must weld too —
+  // unless the module says its displacement reads none (weldUvDriven).
+  state._weldUvDriven = weldUvDriven(shaderResult, source);
   syncWeld(state, mesh);
   // Barycentric corners for a wireframe shader's EDGES mode. AFTER the
   // weld, and that order is the correctness of it: welding makes the
@@ -3854,6 +3876,7 @@ const api = {
     buildMaterial: buildMaterial,
     callShader: callShader,
     shouldWeld: shouldWeld,
+    weldUvDriven: weldUvDriven,
     syncWeld: syncWeld,
     unweld: unweld,
     syncBary: syncBary,
