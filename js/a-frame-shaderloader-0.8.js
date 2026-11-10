@@ -88,6 +88,35 @@
  *           COLOUR). Welding them keeps one u per vertex and squeezes the
  *           texture into the seam column. ABSENT keeps the source test
  *           (weldUvDriven), so every existing module behaves as before.
+ *       12. A displaced MODEL gets its normals SMOOTHED where corners meet
+ *           (smoothModelNormals): the corners of a glTF that sit at one point
+ *           but carry different normals — every hard edge, e.g. a Blender
+ *           cube's 24 corners — take their averaged normal, so a displacement
+ *           along the normal moves them together and the faces no longer fly
+ *           apart. Same gate as the primitive weld (a built positionNode, not
+ *           `mergeVertices: false`), same trade (the shading goes smooth
+ *           across those edges), but NON-destructive: only the `normal`
+ *           attribute of a cloned geometry changes — topology, uv seams,
+ *           vertex colours, skin weights and morph targets all survive — and
+ *           every unweld path puts the model's own geometry back.
+ *       13. `unlit: true` in a material's spec (the top level or a part)
+ *           builds a MeshBasicNodeMaterial instead of MeshPhysicalNodeMaterial
+ *           — A-Frame's `shader: flat`: the colour is shown as it is, no light
+ *           reaches it. normalNode, roughnessNode, metalnessNode and envNode
+ *           are not applied (the basic material would MULTIPLY the colour by
+ *           an envNode); colour, opacity, emissive (added on top) and position
+ *           are, with every render-state key. An emissive-only spec shows the
+ *           emissive once, not doubled. ABSENT keeps the physical material,
+ *           so every existing module builds exactly as before; 0.6 ignores
+ *           the key and renders the same channels lit.
+ *       14. `mergeVertices` is PER MATERIAL for a model's normal smoothing
+ *           (delta 12): a mesh is smoothed only when the material it WEARS
+ *           displaces and does not say `mergeVertices: false` — its own spec's
+ *           key, else the top level's. So a model's undisplaced meshes keep
+ *           their own normals, and one material can stay torn while another
+ *           stays closed. A part may say `mergeVertices: true` to close
+ *           itself under a top-level `false`. Primitives keep the single
+ *           top-level gate (a primitive is one mesh).
  *      Written for three r184. 0.6, 0.5 and 0.4 are FROZEN: shaders exported
  *      against them fetch them from the CDN by URL, so they never change.
  *      Later 0.8.x edits are ADDITIVE only — no renamed state field, method,
@@ -1078,18 +1107,46 @@ function hasChannels(o) {
 // one material. Extracted from the inline block 0.5 had so the default
 // and every part are built by the SAME code — a part built by a copy
 // would drift the moment a channel is added to one and not the other.
-const buildMaterial = function (spec) {
-  const material = new (T().MeshPhysicalNodeMaterial)();
+// The channels only a LIT material reads (header delta 13).
+var LIT_ONLY_PROPS = ["normalNode", "roughnessNode", "metalnessNode", "envNode"];
+
+// Materials whose spec opted out of the model weld (delta 14): its own
+// `mergeVertices`, else the top level's.
+var NO_MERGE = new WeakSet();
+
+const buildMaterial = function (spec, parent) {
+  const built = buildMaterialOnly(spec);
+  const own = spec.mergeVertices;
+  if (own === false || (own === undefined && parent && parent.mergeVertices === false)) NO_MERGE.add(built);
+  return built;
+};
+
+const buildMaterialOnly = function (spec) {
+  // Delta 13: `unlit: true` → the basic material, when the bound three has it.
+  const unlit = spec.unlit === true && typeof T().MeshBasicNodeMaterial === "function";
+  const material = new (unlit ? T().MeshBasicNodeMaterial : T().MeshPhysicalNodeMaterial)();
   for (const prop of NODE_PROPS) {
-    if (spec[prop] !== undefined) {
+    if (spec[prop] !== undefined && !(unlit && LIT_ONLY_PROPS.indexOf(prop) !== -1)) {
       material[prop] = spec[prop];
     }
+  }
+  // An unlit material ADDS emissive to its colour, so the copy below would
+  // show an emissive-only spec twice as bright: show it once, as the colour.
+  if (unlit && spec.emissiveNode !== undefined && spec.colorNode === undefined) {
+    material.colorNode = spec.emissiveNode;
+    material.emissiveNode = null;
+    return applyRenderState(material, spec);
   }
   // Fallback: emissiveNode alone appears black in WebGPU renderer —
   // copy it to colorNode so the shader is always visible.
   if (spec.emissiveNode !== undefined && spec.colorNode === undefined) {
     material.colorNode = spec.emissiveNode;
   }
+  return applyRenderState(material, spec);
+};
+
+// Render-state keys, shared by both material classes (delta 13).
+function applyRenderState(material, spec) {
   if (spec.transparent !== undefined) {
     material.transparent = spec.transparent;
   }
@@ -1114,7 +1171,7 @@ const buildMaterial = function (spec) {
     material.flatShading = spec.flatShading;
   }
   return material;
-};
+}
 
 // Always pass uniforms to functions that accept parameters.
 function callShader(shaderExport, uniforms) {
@@ -1184,7 +1241,7 @@ function buildMaterials(shaderResult) {
         if (mirror.has(names[i])) continue;
         const spec = shaderResult.parts[names[i]];
         if (!hasChannels(spec)) continue;
-        partMaterials.set(names[i], buildMaterial(spec));
+        partMaterials.set(names[i], buildMaterial(spec, shaderResult));
       }
       if (partMaterials.size === 0) {
         partMaterials = null;
@@ -1580,23 +1637,154 @@ function shouldWeld(shaderResult, material, partMaterials, isPrimitive, indexMat
   return false;
 }
 
+/*
+ * The MODEL weld (header delta 12). A copy of `geom` in which every set of
+ * corners sharing one position (quantized relative to the mesh's own size, so
+ * a model in centimetres and one in metres weld alike) but carrying DIFFERENT
+ * normals takes the normalized mean of the distinct normals among them; all
+ * other attributes are untouched. Returns null when no such set exists — a
+ * smooth model has nothing to fix and keeps its own geometry.
+ */
+function smoothModelNormals(geom) {
+  const pos = geom && geom.attributes && geom.attributes.position;
+  const nor = geom && geom.attributes && geom.attributes.normal;
+  if (!pos || !nor || pos.count !== nor.count || pos.count === 0) return null;
+  if (!geom.boundingBox) geom.computeBoundingBox();
+  const bb = geom.boundingBox;
+  const extent = Math.max(bb.max.x - bb.min.x, bb.max.y - bb.min.y, bb.max.z - bb.min.z);
+  if (!(extent > 0) || !Number.isFinite(extent)) return null;
+  const q = 1e5 / extent;
+  const groups = new Map();
+  for (let i = 0; i < pos.count; i++) {
+    const key =
+      Math.round(pos.getX(i) * q) + "_" +
+      Math.round(pos.getY(i) * q) + "_" +
+      Math.round(pos.getZ(i) * q);
+    const g = groups.get(key);
+    if (g) g.push(i); else groups.set(key, [i]);
+  }
+  let out = null;
+  for (const ids of groups.values()) {
+    if (ids.length < 2) continue;
+    // The DISTINCT normals of the set, so a uv-seam duplicate does not weigh
+    // its face twice.
+    const distinct = [];
+    for (const i of ids) {
+      const x = nor.getX(i), y = nor.getY(i), z = nor.getZ(i);
+      let dup = false;
+      for (const d of distinct) {
+        if (Math.abs(d[0] - x) <= 1e-6 && Math.abs(d[1] - y) <= 1e-6 && Math.abs(d[2] - z) <= 1e-6) { dup = true; break; }
+      }
+      if (!dup) distinct.push([x, y, z]);
+    }
+    if (distinct.length < 2) continue;
+    let sx = 0, sy = 0, sz = 0;
+    for (const d of distinct) {
+      const l = Math.hypot(d[0], d[1], d[2]) || 1;
+      sx += d[0] / l; sy += d[1] / l; sz += d[2] / l;
+    }
+    const len = Math.hypot(sx, sy, sz);
+    // Opposed normals (a two-sided sheet) cancel: no direction to agree on.
+    if (!(len > 1e-6)) continue;
+    if (!out) {
+      out = new Float32Array(pos.count * 3);
+      for (let i = 0; i < pos.count; i++) {
+        out[i * 3] = nor.getX(i); out[i * 3 + 1] = nor.getY(i); out[i * 3 + 2] = nor.getZ(i);
+      }
+    }
+    for (const i of ids) {
+      out[i * 3] = sx / len; out[i * 3 + 1] = sy / len; out[i * 3 + 2] = sz / len;
+    }
+  }
+  if (!out) return null;
+  const smoothed = geom.clone();
+  smoothed.setAttribute("normal", new THREE.BufferAttribute(out, 3));
+  return smoothed;
+}
+
+/* Bring every mesh in a MODEL's subtree into line with `_modelWeldWanted`.
+ * `_modelWelds` holds { mesh, source, smoothed } for each geometry we swapped
+ * in; `_modelWeldNone` remembers geometries found to have nothing to smooth. */
+function syncModelWeld(state, root) {
+  if (!state._modelWeldWanted || !root) {
+    unweldModel(state);
+    return;
+  }
+  const keep = [];
+  const live = new Set();
+  root.traverse(function (node) {
+    if (!node.isMesh || node.isGaussianSplat || !node.geometry) return;
+    live.add(node);
+  });
+  for (const rec of state._modelWelds || []) {
+    if (live.has(rec.mesh) && rec.mesh.geometry === rec.smoothed && meshWantsModelWeld(rec.mesh)) {
+      keep.push(rec);
+      continue;
+    }
+    if (rec.mesh.geometry === rec.smoothed) rec.mesh.geometry = rec.source;
+    rec.smoothed.dispose();
+  }
+  const done = new Set(keep.map(function (r) { return r.mesh; }));
+  if (!state._modelWeldNone) state._modelWeldNone = new WeakSet();
+  for (const mesh of live) {
+    if (done.has(mesh) || !meshWantsModelWeld(mesh)) continue;
+    const current = mesh.geometry;
+    if (state._modelWeldNone.has(current)) continue;
+    const smoothed = smoothModelNormals(current);
+    if (!smoothed) {
+      state._modelWeldNone.add(current);
+      continue;
+    }
+    mesh.geometry = smoothed;
+    keep.push({ mesh: mesh, source: current, smoothed: smoothed });
+  }
+  state._modelWelds = keep;
+}
+
+/* Delta 14: does the material this mesh WEARS displace, without opting out? */
+function meshWantsModelWeld(mesh) {
+  const mats = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
+  for (const m of mats) {
+    if (m && m.positionNode != null && !NO_MERGE.has(m)) return true;
+  }
+  return false;
+}
+
+/* Put each model mesh's own geometry back (if it is still wearing ours). */
+function unweldModel(state) {
+  for (const rec of state._modelWelds || []) {
+    if (rec.mesh.geometry === rec.smoothed) rec.mesh.geometry = rec.source;
+    rec.smoothed.dispose();
+  }
+  state._modelWelds = [];
+}
+
 /* Bring the mesh's geometry into line with `_weldWanted`. Idempotent. */
 function syncWeld(state, mesh) {
-  if (!mesh || !mesh.geometry) return;
+  if (!mesh || !mesh.geometry) {
+    // A MODEL's root is a Group with no geometry of its own; its meshes are
+    // below it (delta 12).
+    if (mesh) {
+      unbary(state);
+      syncModelWeld(state, mesh);
+    }
+    return;
+  }
   // Put every geometry we expanded back first. The weld's identity guards
   // ("is the mesh still wearing OUR geometry?") are written against the
   // system's geometry and ours, and a bary geometry sitting on top makes
   // both false — unweld would silently no-op and leak.
   unbary(state);
+  syncModelWeld(state, mesh);
   // A GaussianSplat's geometry is the ONE instanced quad every splat is drawn
   // with: a weld would rebuild it without `instanceCount` and draw one quad.
   // Neither `weld: true` nor a geometry component on the entity may reach it.
   if (mesh.isGaussianSplat) {
-    unweld(state, mesh);
+    unweldPrimitive(state, mesh);
     return;
   }
   if (!state._weldWanted) {
-    unweld(state, mesh);
+    unweldPrimitive(state, mesh);
     return;
   }
   const current = mesh.geometry;
@@ -1629,6 +1817,13 @@ function syncWeld(state, mesh) {
 
 /* Put the system's own geometry back and drop ours. */
 function unweld(state, mesh) {
+  unweldModel(state);
+  unweldPrimitive(state, mesh);
+}
+
+/* The primitive half of unweld — what syncWeld undoes when a PRIMITIVE weld is
+ * not wanted, without touching a model weld it just made (delta 12). */
+function unweldPrimitive(state, mesh) {
   // Identity guard: only restore if the mesh is still wearing OUR geometry.
   // A-Frame's geometry `remove()` swaps in a shared empty BufferGeometry, and
   // putting `_weldSource` back over that would resurrect a disposed geometry.
@@ -2118,7 +2313,7 @@ function applyResult(state, mesh, loaded, hooks) {
   if (mp.status === "applied" && mp.entries.length > 0) {
     indexMaterials = new Map();
     for (const [index, spec] of mp.entries) {
-      indexMaterials.set(index, buildMaterial(spec));
+      indexMaterials.set(index, buildMaterial(spec, shaderResult));
     }
   }
 
@@ -2151,6 +2346,13 @@ function applyResult(state, mesh, loaded, hooks) {
   // apart despite their shared normals, so those groups must weld too —
   // unless the module says its displacement reads none (weldUvDriven).
   state._weldUvDriven = weldUvDriven(shaderResult, source);
+  // A MODEL displaced under the same gate gets its hard-edge normals
+  // smoothed instead (delta 12) — never a primitive, which welds above.
+  // Per MESH since delta 14: wanted while any material displaces; each mesh
+  // then asks its own material (meshWantsModelWeld).
+  state._modelWeldWanted =
+    !hooks.isPrimitive &&
+    shouldWeld({}, built.material, built.partMaterials, true, indexMaterials);
   syncWeld(state, mesh);
   // Barycentric corners for a wireframe shader's EDGES mode. AFTER the
   // weld, and that order is the correctness of it: welding makes the
@@ -2268,6 +2470,7 @@ function apply(target, input, opts) {
     restoreOriginalMaterials(state, target);
     disposeShaderMaterial(state);
     state._weldWanted = false;
+    state._modelWeldWanted = false;
     state._baryWanted = false;
     unbary(state);
     unweld(state, target);
@@ -2316,6 +2519,7 @@ function apply(target, input, opts) {
       restoreOriginalMaterials(state, target);
       disposeShaderMaterial(state);
       state._weldWanted = false;
+      state._modelWeldWanted = false;
       state._weldScanned = null;
       state._baryWanted = false;
       unbary(state);
@@ -3878,6 +4082,7 @@ const api = {
     shouldWeld: shouldWeld,
     weldUvDriven: weldUvDriven,
     syncWeld: syncWeld,
+    smoothModelNormals: smoothModelNormals,
     unweld: unweld,
     syncBary: syncBary,
     unbary: unbary,
@@ -3983,6 +4188,7 @@ var componentDef = {
     // `_weldScanned` remembers a geometry we already found nothing to weld in,
     // so a re-apply does not rescan it.
     this._weldWanted = false;
+    this._modelWeldWanted = false;
     this._welded = null;
     this._weldSource = null;
     this._weldScanned = null;
@@ -4192,6 +4398,7 @@ var componentDef = {
       // false, which would strand the welded geometry with its source
       // reference already dropped.
       this._weldWanted = false;
+      this._modelWeldWanted = false;
       this._baryWanted = false;
       this.unbary();
       this.unweld();
@@ -4266,6 +4473,7 @@ var componentDef = {
     // shader is going away. unbary FIRST, for the reason syncWeld does it:
     // unweld's identity guard is false while our geometry is on the mesh.
     this._weldWanted = false;
+    this._modelWeldWanted = false;
     this._weldScanned = null;
     this._baryWanted = false;
     this.unbary();
